@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin · Lista de Ramais · GACC-BA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --blue-dark:   #0d3b6e;
+      --blue:        #1565c0;
+      --blue-mid:    #1976d2;
+      --blue-light:  #e3f0fc;
+      --green-dark:  #1b5e20;
+      --green:       #2e7d32;
+      --green-mid:   #388e3c;
+      --green-light: #e8f5e9;
+      --yellow:      #f9a825;
+      --red:         #c62828;
+      --red-light:   #ffebee;
+      --white:       #ffffff;
+      --gray-50:     #f8fafc;
+      --gray-100:    #f1f5f9;
+      --gray-200:    #e2e8f0;
+      --gray-400:    #94a3b8;
+      --gray-600:    #475569;
+      --gray-800:    #1e293b;
+      --sidebar-w:   260px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Open Sans', sans-serif; background: var(--gray-50); color: var(--gray-800); }
+
+    /* ─── LOGIN SCREEN ─── */
+    #loginScreen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--green-dark) 100%);
+    }
+    .login-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-logo .icon-wrap {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 24px rgba(21,101,192,0.4);
+    }
+    .login-logo .icon-wrap i { font-size: 1.8rem; color: var(--white); }
+    .login-logo h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--blue-dark);
+    }
+    .login-logo p { font-size: 0.83rem; color: var(--gray-400); margin-top: 4px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .form-group .input-wrap { position: relative; }
+    .form-group .input-wrap i {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--blue-mid); font-size: 0.9rem;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-family: 'Open Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+      color: var(--white);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(13,59,110,0.35); }
+    .error-msg {
+      background: var(--red-light);
+      color: var(--red);
+      border: 1px solid rgba(198,40,40,0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      margin-top: 16px;
+      display: none;
+    }
+
+    /* ─── APP SHELL ─── */
+    #appShell { display: none; }
+    .shell { display: flex; min-height: 100vh; }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: linear-gradient(180deg, var(--blue-dark) 0%, #0a2d55 100%);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 200;
+    }
+    .sidebar-logo {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-logo .badge {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--blue-dark);
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .sidebar-logo h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--white);
+    }
+    .sidebar-logo p { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+    .sidebar-user {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--yellow);
+      color: var(--blue-dark);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .user-info .name { font-size: 0.85rem; font-weight: 600; color: var(--white); }
+    .user-info .role { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+
+    .sidebar-nav { flex: 1; padding: 16px 0; }
+    .nav-section {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 20px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      color: rgba(255,255,255,0.65);
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .nav-item i { width: 18px; text-align: center; font-size: 0.9rem; }
+    .nav-item:hover { background: rgba(255,255,255,0.07); color: var(--white); }
+    .nav-item.active { background: rgba(255,255,255,0.12); border-left-color: var(--yellow); color: var(--white); font-weight: 600; }
+
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .btn-logout {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.83rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.15); color: var(--white); }
+    .btn-back {
+      width: 100%;
+      padding: 10px;
+      background: rgba(249,168,37,0.15);
+      border: 1px solid rgba(249,168,37,0.3);
+      border-radius: 8px;
+      color: var(--yellow);
+      font-size: 0.83rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+      text-decoration: none;
+    }
+    .btn-back:hover { background: rgba(249,168,37,0.25); }
+
+    /* ─── MAIN CONTENT ─── */
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 28px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .topbar h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--blue-dark);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .page { display: none; padding: 28px; }
+    .page.active { display: block; }
+
+    /* ─── STATS CARDS ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-block {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .stat-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    .stat-icon.blue { background: var(--blue-light); color: var(--blue); }
+    .stat-icon.green { background: var(--green-light); color: var(--green); }
+    .stat-icon.yellow { background: #fff8e1; color: #f57f17; }
+    .stat-icon.red { background: var(--red-light); color: var(--red); }
+    .stat-info .num {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--blue-dark);
+      line-height: 1;
+    }
+    .stat-info .lbl { font-size: 0.78rem; color: var(--gray-600); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ─── SECTION CARD ─── */
+    .section-card {
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .section-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .section-header h4 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--blue-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-header h4 i { color: var(--blue-mid); }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: none;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--blue); color: var(--white); }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-success { background: var(--green); color: var(--white); }
+    .btn-success:hover { background: var(--green-dark); }
+    .btn-danger { background: var(--red); color: var(--white); }
+    .btn-danger:hover { background: #b71c1c; }
+    .btn-ghost { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .btn-ghost:hover { background: var(--gray-200); }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+    /* ─── SEARCH BAR ─── */
+    .search-bar {
+      position: relative;
+      min-width: 220px;
+    }
+    .search-bar i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--blue-mid); font-size: 0.85rem; }
+    .search-bar input {
+      width: 100%;
+      padding: 9px 12px 9px 34px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: 'Open Sans', sans-serif;
+      outline: none;
+    }
+    .search-bar input:focus { border-color: var(--blue-mid); }
+
+    /* ─── TABLE ─── */
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table thead tr { background: var(--gray-50); border-bottom: 2px solid var(--gray-200); }
+    .admin-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.73rem;
+      font-weight: 700;
+      font-family: 'Montserrat', sans-serif;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .admin-table td { padding: 12px 16px; font-size: 0.86rem; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+    .admin-table tbody tr:hover { background: var(--gray-50); }
+    .admin-table tbody tr:last-child td { border-bottom: none; }
+    .tbl-name { font-weight: 600; color: var(--blue-dark); }
+    .tbl-sub { font-size: 0.76rem; color: var(--gray-400); margin-top: 1px; }
+    .badge-ativo { padding: 3px 10px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; }
+    .badge-ativo.sim { background: var(--green-light); color: var(--green-dark); }
+    .badge-ativo.nao { background: var(--red-light); color: var(--red); }
+    .ramal-pill {
+      display: inline-block;
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 3px 10px;
+      border-radius: 50px;
+    }
+    .actions { display: flex; gap: 6px; }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+      padding: 20px;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--white);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      transform: scale(0.96);
+      transition: transform 0.2s;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal-header {
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h4 { font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 700; color: var(--blue-dark); }
+    .modal-close { background: none; border: none; font-size: 1.1rem; color: var(--gray-400); cursor: pointer; padding: 4px; }
+    .modal-close:hover { color: var(--gray-800); }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* ─── FORM ─── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-field { margin-bottom: 16px; }
+    .form-field label { display: block; font-size: 0.79rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+    .form-field input, .form-field select {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: 'Open Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-field input:focus, .form-field select:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(25,118,210,0.08); }
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: var(--gray-200);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: var(--white);
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .toggle-slider { background: var(--green); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--blue-dark);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 9999;
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: var(--green); }
+    #toast.error { background: var(--red); }
+
+    /* ─── CONFIRM DIALOG ─── */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 600;
+      display: none;
+    }
+    .confirm-overlay.open { display: flex; }
+    .confirm-box {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .confirm-box .icon { font-size: 2.5rem; color: var(--red); margin-bottom: 12px; }
+    .confirm-box h4 { font-family: 'Montserrat', sans-serif; font-weight: 700; color: var(--gray-800); margin-bottom: 8px; }
+    .confirm-box p { font-size: 0.87rem; color: var(--gray-600); margin-bottom: 20px; }
+    .confirm-box .btns { display: flex; gap: 10px; justify-content: center; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon-wrap"><i class="fas fa-shield-alt"></i></div>
+      <h2>Painel Administrativo</h2>
+      <p>Sistema de Ramais · GACC-BA</p>
+    </div>
+    <div class="form-group">
+      <label>Usuário</label>
+      <div class="input-wrap">
+        <i class="fas fa-user"></i>
+        <input type="text" id="loginUser" placeholder="Digite seu usuário" autocomplete="username"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+    </div>
+    <button class="btn-login" onclick="doLogin()">
+      <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
+    </button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div class="shell">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="badge">Admin</div>
+        <h2>GACC-BA</h2>
+        <p>Painel de Administração</p>
+      </div>
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebarAvatar">A</div>
+        <div class="user-info">
+          <div class="name" id="sidebarName">Usuário</div>
+          <div class="role">Administrador</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Geral</div>
+        <div class="nav-item active" onclick="showPage('dashboard')">
+          <i class="fas fa-chart-pie"></i> Dashboard
+        </div>
+        <div class="nav-section">Gerenciar</div>
+        <div class="nav-item" onclick="showPage('ramais')">
+          <i class="fas fa-phone"></i> Ramais
+        </div>
+        <div class="nav-item" onclick="showPage('usuarios')">
+          <i class="fas fa-users-cog"></i> Usuários Admin
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="index.html" class="btn-back"><i class="fas fa-arrow-left"></i> Ver Lista Pública</a>
+        <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <h3 id="pageTitle">Dashboard</h3>
+        <div class="topbar-right">
+          <span style="font-size:0.8rem;color:var(--gray-400);"><i class="fas fa-circle" style="color:#4caf50;font-size:0.6rem;"></i> Online</span>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-block"><div class="stat-icon blue"><i class="fas fa-phone"></i></div><div class="stat-info"><div class="num" id="s-ramais">—</div><div class="lbl">Ramais Ativos</div></div></div>
+          <div class="stat-block"><div class="stat-icon green"><i class="fas fa-sitemap"></i></div><div class="stat-info"><div class="num" id="s-setores">—</div><div class="lbl">Setores</div></div></div>
+          <div class="stat-block"><div class="stat-icon yellow"><i class="fas fa-users-cog"></i></div><div class="stat-info"><div class="num" id="s-users">—</div><div class="lbl">Usuários Admin</div></div></div>
+          <div class="stat-block"><div class="stat-icon red"><i class="fas fa-phone-slash"></i></div><div class="stat-info"><div class="num" id="s-inativos">—</div><div class="lbl">Inativos</div></div></div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-clock"></i> Últimos Ramais Cadastrados</h4>
+            <button class="btn btn-primary btn-sm" onclick="showPage('ramais')"><i class="fas fa-phone"></i> Ver Todos</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="admin-table" id="recentTable">
+              <thead><tr><th>Colaborador</th><th>Setor</th><th>Ramal</th><th>Status</th></tr></thead>
+              <tbody id="recentBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RAMAIS -->
+      <div class="page" id="page-ramais">
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-phone"></i> Gerenciar Ramais</h4>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="ramalSearch" placeholder="Buscar…" oninput="renderRamaisTable()"/></div>
+              <button class="btn btn-success" onclick="openRamalModal()"><i class="fas fa-plus"></i> Novo Ramal</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>Colaborador</th><th>Setor</th><th>Ramal</th><th>E-mail</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="ramalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div class="page" id="page-usuarios">
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-users-cog"></i> Usuários Administradores</h4>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="userSearch" placeholder="Buscar…" oninput="renderUsersTable()"/></div>
+              <button class="btn btn-success" onclick="openUserModal()"><i class="fas fa-plus"></i> Novo Usuário</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>Nome</th><th>Username</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+              <tbody id="userBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /shell -->
+</div><!-- /appShell -->
+
+<!-- MODAL RAMAL -->
+<div class="modal-overlay" id="ramalModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 id="ramalModalTitle"><i class="fas fa-phone"></i> Novo Ramal</h4>
+      <button class="modal-close" onclick="closeModal('ramalModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ramalId"/>
+      <div class="form-row">
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Nome Completo *</label>
+          <input type="text" id="ramalNome" placeholder="Ex: Maria Silva"/>
+        </div>
+        <div class="form-field">
+          <label>Cargo *</label>
+          <input type="text" id="ramalCargo" placeholder="Ex: Assistente Social"/>
+        </div>
+        <div class="form-field">
+          <label>Setor *</label>
+          <input type="text" id="ramalSetor" placeholder="Ex: Serviço Social" list="setorList"/>
+          <datalist id="setorList"></datalist>
+        </div>
+        <div class="form-field">
+          <label>Ramal *</label>
+          <input type="text" id="ramalNum" placeholder="Ex: 1001"/>
+        </div>
+        <div class="form-field">
+          <label>E-mail *</label>
+          <input type="email" id="ramalEmail" placeholder="Ex: nome@gacc-ba.org.br"/>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="ramalAtivo" checked/>
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:0.85rem;color:var(--gray-600)">Ramal ativo (visível na lista pública)</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('ramalModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRamal()"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUÁRIO -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 id="userModalTitle"><i class="fas fa-user-plus"></i> Novo Usuário</h4>
+      <button class="modal-close" onclick="closeModal('userModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="userId"/>
+      <div class="form-row">
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Nome Completo *</label>
+          <input type="text" id="userName" placeholder="Ex: João Silva"/>
+        </div>
+        <div class="form-field">
+          <label>Username *</label>
+          <input type="text" id="userUsername" placeholder="Ex: joao.silva"/>
+        </div>
+        <div class="form-field">
+          <label>Perfil</label>
+          <select id="userRole">
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label id="passLabel">Senha *</label>
+          <input type="password" id="userPass" placeholder="Mínimo 6 caracteres"/>
+          <small style="color:var(--gray-400);font-size:0.75rem;margin-top:4px;display:block;" id="passHint"></small>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('userModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="icon"><i class="fas fa-trash-alt"></i></div>
+    <h4>Confirmar Exclusão</h4>
+    <p id="confirmMsg">Tem certeza? Esta ação não pode ser desfeita.</p>
+    <div class="btns">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="confirmBtn">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('ramal_token');
+let currentUser = JSON.parse(localStorage.getItem('ramal_user') || 'null');
+let allRamais = [], allUsers = [];
+let confirmCb = null;
+
+// ─── AUTH ───
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('ramal_token', token);
+    localStorage.setItem('ramal_user', JSON.stringify(currentUser));
+    initApp();
+  } catch (e) {
+    const el = document.getElementById('loginError');
+    el.textContent = e.message;
+    el.style.display = 'block';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('ramal_token');
+  localStorage.removeItem('ramal_user');
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+// ─── INIT ───
+function initApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  const initials = currentUser.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent = currentUser.name;
+  loadStats();
+  loadRamais();
+  loadUsers();
+}
+
+// Check if already logged in
+if (token && currentUser) initApp();
+
+// ─── NAVIGATION ───
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  event?.currentTarget?.classList.add('active');
+  const titles = { dashboard: 'Dashboard', ramais: 'Gerenciar Ramais', usuarios: 'Usuários Administradores' };
+  document.getElementById('pageTitle').textContent = titles[page];
+}
+
+// ─── STATS ───
+async function loadStats() {
+  const res = await fetch(`${API}/admin/stats`, { headers: authHeaders() });
+  const data = await res.json();
+  document.getElementById('s-ramais').textContent = data.totalRamais;
+  document.getElementById('s-setores').textContent = data.totalSetores;
+  document.getElementById('s-users').textContent = data.totalUsers;
+  document.getElementById('s-inativos').textContent = data.totalInativos;
+}
+
+// ─── RAMAIS ───
+async function loadRamais() {
+  const res = await fetch(`${API}/admin/ramais`, { headers: authHeaders() });
+  allRamais = await res.json();
+  renderRamaisTable();
+  renderRecentTable();
+  populateSetorList();
+}
+
+function populateSetorList() {
+  const dl = document.getElementById('setorList');
+  const setores = [...new Set(allRamais.map(r => r.setor))].sort();
+  dl.innerHTML = setores.map(s => `<option value="${s}">`).join('');
+}
+
+function renderRamaisTable() {
+  const q = document.getElementById('ramalSearch')?.value.toLowerCase() || '';
+  const filtered = allRamais.filter(r =>
+    [r.nome, r.cargo, r.setor, r.ramal, r.email].some(v => v.toLowerCase().includes(q))
+  );
+  const body = document.getElementById('ramalBody');
+  body.innerHTML = filtered.map(r => `
+    <tr>
+      <td><div class="tbl-name">${r.nome}</div><div class="tbl-sub">${r.cargo}</div></td>
+      <td>${r.setor}</td>
+      <td><span class="ramal-pill">${r.ramal}</span></td>
+      <td><a href="mailto:${r.email}" style="color:var(--blue-mid);text-decoration:none;">${r.email}</a></td>
+      <td><span class="badge-ativo ${r.ativo ? 'sim' : 'nao'}">${r.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      <td><div class="actions">
+        <button class="btn btn-ghost btn-sm" onclick="openRamalModal(${r.id})"><i class="fas fa-pencil"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRamal(${r.id}, '${r.nome.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+      </div></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum ramal encontrado</td></tr>';
+}
+
+function renderRecentTable() {
+  const recent = [...allRamais].sort((a,b) => b.id - a.id).slice(0, 5);
+  document.getElementById('recentBody').innerHTML = recent.map(r => `
+    <tr>
+      <td><div class="tbl-name">${r.nome}</div><div class="tbl-sub">${r.cargo}</div></td>
+      <td>${r.setor}</td>
+      <td><span class="ramal-pill">${r.ramal}</span></td>
+      <td><span class="badge-ativo ${r.ativo ? 'sim' : 'nao'}">${r.ativo ? 'Ativo' : 'Inativo'}</span></td>
+    </tr>
+  `).join('');
+}
+
+function openRamalModal(id) {
+  const r = id ? allRamais.find(x => x.id === id) : null;
+  document.getElementById('ramalId').value = id || '';
+  document.getElementById('ramalModalTitle').innerHTML = id
+    ? '<i class="fas fa-pencil"></i> Editar Ramal'
+    : '<i class="fas fa-plus"></i> Novo Ramal';
+  document.getElementById('ramalNome').value = r?.nome || '';
+  document.getElementById('ramalCargo').value = r?.cargo || '';
+  document.getElementById('ramalSetor').value = r?.setor || '';
+  document.getElementById('ramalNum').value = r?.ramal || '';
+  document.getElementById('ramalEmail').value = r?.email || '';
+  document.getElementById('ramalAtivo').checked = r ? !!r.ativo : true;
+  openModal('ramalModal');
+}
+
+async function saveRamal() {
+  const id = document.getElementById('ramalId').value;
+  const payload = {
+    nome: document.getElementById('ramalNome').value.trim(),
+    cargo: document.getElementById('ramalCargo').value.trim(),
+    setor: document.getElementById('ramalSetor').value.trim(),
+    ramal: document.getElementById('ramalNum').value.trim(),
+    email: document.getElementById('ramalEmail').value.trim(),
+    ativo: document.getElementById('ramalAtivo').checked ? 1 : 0
+  };
+  if (!payload.nome || !payload.cargo || !payload.setor || !payload.ramal || !payload.email)
+    return showToast('Preencha todos os campos obrigatórios', 'error');
+  const url = id ? `${API}/admin/ramais/${id}` : `${API}/admin/ramais`;
+  const method = id ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) return showToast(data.error, 'error');
+  showToast(data.message, 'success');
+  closeModal('ramalModal');
+  loadRamais();
+  loadStats();
+}
+
+function deleteRamal(id, nome) {
+  openConfirm(`Excluir o ramal de <strong>${nome}</strong>?`, async () => {
+    const res = await fetch(`${API}/admin/ramais/${id}`, { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json();
+    showToast(data.message, 'success');
+    loadRamais();
+    loadStats();
+  });
+}
+
+// ─── USERS ───
+async function loadUsers() {
+  const res = await fetch(`${API}/admin/users`, { headers: authHeaders() });
+  allUsers = await res.json();
+  renderUsersTable();
+}
+
+function renderUsersTable() {
+  const q = document.getElementById('userSearch')?.value.toLowerCase() || '';
+  const filtered = allUsers.filter(u =>
+    [u.name, u.username, u.role].some(v => v.toLowerCase().includes(q))
+  );
+  document.getElementById('userBody').innerHTML = filtered.map(u => `
+    <tr>
+      <td><div class="tbl-name">${u.name}</div></td>
+      <td><code style="background:var(--gray-100);padding:2px 8px;border-radius:4px;font-size:0.82rem">${u.username}</code></td>
+      <td><span class="badge-ativo sim">${u.role}</span></td>
+      <td style="color:var(--gray-400);font-size:0.82rem">${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+      <td><div class="actions">
+        <button class="btn btn-ghost btn-sm" onclick="openUserModal(${u.id})"><i class="fas fa-pencil"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+      </div></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum usuário encontrado</td></tr>';
+}
+
+function openUserModal(id) {
+  const u = id ? allUsers.find(x => x.id === id) : null;
+  document.getElementById('userId').value = id || '';
+  document.getElementById('userModalTitle').innerHTML = id
+    ? '<i class="fas fa-user-edit"></i> Editar Usuário'
+    : '<i class="fas fa-user-plus"></i> Novo Usuário';
+  document.getElementById('userName').value = u?.name || '';
+  document.getElementById('userUsername').value = u?.username || '';
+  document.getElementById('userRole').value = u?.role || 'admin';
+  document.getElementById('userUsername').disabled = !!id;
+  document.getElementById('userPass').value = '';
+  document.getElementById('passLabel').textContent = id ? 'Nova Senha (deixe em branco para manter)' : 'Senha *';
+  document.getElementById('passHint').textContent = id ? 'Preencha apenas se quiser alterar a senha' : '';
+  openModal('userModal');
+}
+
+async function saveUser() {
+  const id = document.getElementById('userId').value;
+  const payload = {
+    name: document.getElementById('userName').value.trim(),
+    username: document.getElementById('userUsername').value.trim(),
+    role: document.getElementById('userRole').value,
+    password: document.getElementById('userPass').value
+  };
+  if (!id && !payload.password) return showToast('Informe uma senha', 'error');
+  if (!id && !payload.username) return showToast('Informe o username', 'error');
+  if (!payload.name) return showToast('Informe o nome', 'error');
+  const url = id ? `${API}/admin/users/${id}` : `${API}/admin/users`;
+  const method = id ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) return showToast(data.error, 'error');
+  showToast(data.message, 'success');
+  closeModal('userModal');
+  loadUsers();
+  loadStats();
+}
+
+function deleteUser(id, nome) {
+  openConfirm(`Excluir o usuário <strong>${nome}</strong>?`, async () => {
+    const res = await fetch(`${API}/admin/users/${id}`, { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error, 'error');
+    showToast(data.message, 'success');
+    loadUsers();
+    loadStats();
+  });
+}
+
+// ─── UTILS ───
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openConfirm(msg, cb) {
+  document.getElementById('confirmMsg').innerHTML = msg;
+  confirmCb = cb;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmBtn').onclick = () => { closeConfirm(); cb(); };
+}
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-circle', info: 'fas fa-info-circle' };
+  t.innerHTML = `<i class="${icons[type]}"></i> ${msg}`;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3200);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>

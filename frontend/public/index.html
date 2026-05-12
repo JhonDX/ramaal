@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lista de Ramais · GACC-BA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --blue-dark:   #0d3b6e;
+      --blue:        #1565c0;
+      --blue-mid:    #1976d2;
+      --blue-light:  #e3f0fc;
+      --green-dark:  #1b5e20;
+      --green:       #2e7d32;
+      --green-mid:   #388e3c;
+      --green-light: #e8f5e9;
+      --yellow:      #f9a825;
+      --white:       #ffffff;
+      --gray-50:     #f8fafc;
+      --gray-100:    #f1f5f9;
+      --gray-200:    #e2e8f0;
+      --gray-400:    #94a3b8;
+      --gray-600:    #475569;
+      --gray-800:    #1e293b;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md:   0 4px 16px rgba(13,59,110,0.12);
+      --shadow-lg:   0 8px 32px rgba(13,59,110,0.18);
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 60%, var(--green-dark) 100%);
+      padding: 0;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo-icon {
+      width: 46px; height: 46px;
+      background: var(--white);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+    }
+    .logo-icon svg { width: 28px; height: 28px; }
+    .logo-text h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: 0.5px;
+      line-height: 1.1;
+    }
+    .logo-text span {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.75);
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .header-nav { display: flex; align-items: center; gap: 12px; }
+    .nav-badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: var(--white);
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+      backdrop-filter: blur(8px);
+    }
+    .nav-badge i { font-size: 0.85rem; color: var(--yellow); }
+    .btn-admin {
+      background: var(--yellow);
+      color: var(--blue-dark);
+      border: none;
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .btn-admin:hover { background: #ffd54f; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(249,168,37,0.4); }
+
+    /* ─── HERO STRIP ─── */
+    .hero-strip {
+      background: linear-gradient(90deg, var(--blue-light), var(--green-light));
+      border-bottom: 2px solid var(--gray-200);
+      padding: 28px 24px;
+    }
+    .hero-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .hero-text h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--blue-dark);
+    }
+    .hero-text h2 span { color: var(--green); }
+    .hero-text p { color: var(--gray-600); font-size: 0.9rem; margin-top: 4px; }
+    .hero-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border-top: 3px solid var(--blue);
+      min-width: 100px;
+    }
+    .stat-card.green { border-top-color: var(--green); }
+    .stat-card .num {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--blue-dark);
+    }
+    .stat-card.green .num { color: var(--green-dark); }
+    .stat-card .lbl { font-size: 0.72rem; color: var(--gray-600); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ─── SEARCH & FILTERS ─── */
+    .toolbar {
+      max-width: 1280px;
+      margin: 28px auto 0;
+      padding: 0 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+    .search-wrap i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--blue-mid);
+      font-size: 0.95rem;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 11px 14px 11px 40px;
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-family: 'Open Sans', sans-serif;
+      background: var(--white);
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+    .filter-select {
+      padding: 11px 36px 11px 14px;
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-family: 'Open Sans', sans-serif;
+      background: var(--white);
+      color: var(--gray-800);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231565c0'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 18px;
+      transition: border-color 0.2s;
+    }
+    .filter-select:focus { border-color: var(--blue-mid); }
+    .view-btns { display: flex; gap: 4px; }
+    .view-btn {
+      width: 40px; height: 40px;
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      background: var(--white);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-400);
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    .view-btn.active { background: var(--blue); border-color: var(--blue); color: var(--white); }
+
+    /* ─── RESULTS INFO ─── */
+    .results-bar {
+      max-width: 1280px;
+      margin: 16px auto 0;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--gray-600);
+      font-size: 0.85rem;
+    }
+    .results-bar strong { color: var(--blue-dark); }
+
+    /* ─── TABLE VIEW ─── */
+    .content-area {
+      max-width: 1280px;
+      margin: 16px auto 40px;
+      padding: 0 24px;
+    }
+    .table-wrap {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr {
+      background: linear-gradient(90deg, var(--blue-dark), var(--blue));
+    }
+    thead th {
+      padding: 14px 16px;
+      text-align: left;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--white);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+    }
+    thead th:first-child { padding-left: 24px; }
+    thead th:last-child { padding-right: 24px; }
+    tbody tr {
+      border-bottom: 1px solid var(--gray-100);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--blue-light); }
+    tbody td { padding: 14px 16px; font-size: 0.88rem; vertical-align: middle; }
+    tbody td:first-child { padding-left: 24px; }
+    tbody td:last-child { padding-right: 24px; }
+
+    .person-cell { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+    .person-name { font-weight: 600; color: var(--blue-dark); font-size: 0.9rem; }
+    .person-cargo { font-size: 0.78rem; color: var(--gray-600); margin-top: 1px; }
+
+    .setor-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--green-light);
+      color: var(--green-dark);
+      border: 1px solid rgba(46,125,50,0.25);
+    }
+    .ramal-num {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--blue);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ramal-num i { font-size: 0.8rem; color: var(--green); }
+    .email-link {
+      color: var(--blue-mid);
+      text-decoration: none;
+      font-size: 0.85rem;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.15s;
+    }
+    .email-link:hover { color: var(--blue-dark); text-decoration: underline; }
+    .email-link i { font-size: 0.78rem; }
+
+    /* ─── GRID VIEW ─── */
+    .grid-view {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .grid-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .grid-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .card-top {
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .card-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--blue-dark);
+      background: var(--white);
+      border: 3px solid rgba(255,255,255,0.4);
+      flex-shrink: 0;
+    }
+    .card-name { font-family: 'Montserrat', sans-serif; font-weight: 700; color: var(--white); font-size: 0.95rem; }
+    .card-cargo { font-size: 0.78rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+    .card-body { padding: 16px 20px; }
+    .card-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 0.85rem;
+    }
+    .card-row:last-child { border-bottom: none; }
+    .card-row i { width: 18px; text-align: center; font-size: 0.85rem; }
+    .card-row.blue i { color: var(--blue-mid); }
+    .card-row.green i { color: var(--green); }
+    .card-row .val { color: var(--gray-800); }
+    .card-row .val.bold { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1rem; color: var(--blue); }
+    .card-row a { color: var(--blue-mid); text-decoration: none; }
+    .card-row a:hover { text-decoration: underline; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--gray-400);
+    }
+    .empty-state i { font-size: 3rem; margin-bottom: 16px; color: var(--gray-200); }
+    .empty-state p { font-size: 1rem; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--blue-dark);
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      padding: 20px;
+      font-size: 0.8rem;
+    }
+    footer strong { color: var(--yellow); }
+
+    /* ─── SECTION HEADERS (grouped by setor) ─── */
+    .setor-header {
+      padding: 10px 24px;
+      background: linear-gradient(90deg, var(--green-light), var(--blue-light));
+      border-top: 2px solid var(--green-mid);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--green-dark);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .hero-inner { flex-direction: column; align-items: flex-start; }
+      .header-inner { gap: 12px; }
+      .logo-text h1 { font-size: 0.9rem; }
+      .nav-badge { display: none; }
+      thead th:nth-child(3), thead th:nth-child(5) { display: none; }
+      tbody td:nth-child(3), tbody td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="35" r="18" fill="#1565c0"/>
+          <path d="M20 75 Q50 45 80 75" stroke="#2e7d32" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <circle cx="50" cy="35" r="10" fill="white"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>GACC-BA</h1>
+        <span>Grupo de Apoio à Criança com Câncer</span>
+      </div>
+    </div>
+    <div class="header-nav">
+      <div class="nav-badge">
+        <i class="fas fa-phone"></i>
+        Lista de Ramais
+      </div>
+      <a href="admin.html" class="btn-admin">
+        <i class="fas fa-lock"></i> Admin
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="hero-strip">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <h2>Diretório <span>Telefônico</span> Institucional</h2>
+      <p>Encontre rapidamente ramais, e-mails e setores da nossa equipe</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card" id="stat-ramais">
+        <div class="num" id="num-ramais">—</div>
+        <div class="lbl">Ramais</div>
+      </div>
+      <div class="stat-card green" id="stat-setores">
+        <div class="num" id="num-setores">—</div>
+        <div class="lbl">Setores</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="search-wrap">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Buscar por nome, cargo, ramal ou e-mail…" oninput="filterRamais()"/>
+  </div>
+  <select class="filter-select" id="setorFilter" onchange="filterRamais()">
+    <option value="">Todos os setores</option>
+  </select>
+  <div class="view-btns">
+    <button class="view-btn active" id="btnTable" onclick="setView('table')" title="Tabela"><i class="fas fa-list"></i></button>
+    <button class="view-btn" id="btnGrid" onclick="setView('grid')" title="Cards"><i class="fas fa-grip"></i></button>
+  </div>
+</div>
+
+<div class="results-bar">
+  <span id="resultsCount">Carregando…</span>
+  <span id="lastUpdate" style="color:var(--gray-400);font-size:0.78rem;"></span>
+</div>
+
+<div class="content-area" id="contentArea">
+  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando ramais…</p></div>
+</div>
+
+<footer>
+  <strong>GACC-BA</strong> · Sistema de Ramais Institucionais · Todos os direitos reservados
+</footer>
+
+<script>
+  const API = '/api';
+  let allRamais = [];
+  let currentView = 'table';
+
+  const AVATAR_COLORS = [
+    '#1565c0','#2e7d32','#0d3b6e','#1b5e20','#1976d2','#388e3c','#283593','#1a237e'
+  ];
+
+  function getInitials(name) {
+    return name.split(' ').slice(0,2).map(n => n[0]).join('').toUpperCase();
+  }
+  function getColor(name) {
+    let h = 0;
+    for (let c of name) h = (h * 31 + c.charCodeAt(0)) % AVATAR_COLORS.length;
+    return AVATAR_COLORS[h];
+  }
+
+  async function loadSetores() {
+    const res = await fetch(`${API}/setores`);
+    const setores = await res.json();
+    const sel = document.getElementById('setorFilter');
+    setores.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+  }
+
+  async function loadRamais() {
+    const res = await fetch(`${API}/ramais`);
+    allRamais = await res.json();
+    document.getElementById('num-ramais').textContent = allRamais.length;
+    const setores = [...new Set(allRamais.map(r => r.setor))];
+    document.getElementById('num-setores').textContent = setores.length;
+    document.getElementById('lastUpdate').textContent = 'Atualizado em ' + new Date().toLocaleTimeString('pt-BR');
+    renderView(allRamais);
+  }
+
+  function filterRamais() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const setor = document.getElementById('setorFilter').value;
+    const filtered = allRamais.filter(r => {
+      const matchQ = !q || [r.nome, r.cargo, r.ramal, r.email, r.setor].some(v => v.toLowerCase().includes(q));
+      const matchS = !setor || r.setor === setor;
+      return matchQ && matchS;
+    });
+    renderView(filtered);
+  }
+
+  function setView(v) {
+    currentView = v;
+    document.getElementById('btnTable').classList.toggle('active', v === 'table');
+    document.getElementById('btnGrid').classList.toggle('active', v === 'grid');
+    filterRamais();
+  }
+
+  function renderView(data) {
+    document.getElementById('resultsCount').innerHTML =
+      `Exibindo <strong>${data.length}</strong> de <strong>${allRamais.length}</strong> ramais`;
+    const area = document.getElementById('contentArea');
+    if (!data.length) {
+      area.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Nenhum ramal encontrado para essa busca.</p></div>`;
+      return;
+    }
+    if (currentView === 'table') renderTable(data, area);
+    else renderGrid(data, area);
+  }
+
+  function renderTable(data, area) {
+    // Group by setor
+    const groups = {};
+    data.forEach(r => { if (!groups[r.setor]) groups[r.setor] = []; groups[r.setor].push(r); });
+
+    let html = `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Colaborador</th>
+        <th>Setor</th>
+        <th>Ramal</th>
+        <th>E-mail</th>
+      </tr></thead><tbody>`;
+
+    Object.keys(groups).sort().forEach(setor => {
+      html += `<tr><td colspan="4" style="padding:0">
+        <div class="setor-header"><i class="fas fa-sitemap"></i>${setor}</div>
+      </td></tr>`;
+      groups[setor].forEach(r => {
+        const bg = getColor(r.nome);
+        html += `<tr>
+          <td>
+            <div class="person-cell">
+              <div class="avatar" style="background:${bg}">${getInitials(r.nome)}</div>
+              <div>
+                <div class="person-name">${r.nome}</div>
+                <div class="person-cargo">${r.cargo}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="setor-badge">${r.setor}</span></td>
+          <td><div class="ramal-num"><i class="fas fa-phone"></i>${r.ramal}</div></td>
+          <td><a class="email-link" href="mailto:${r.email}"><i class="fas fa-envelope"></i>${r.email}</a></td>
+        </tr>`;
+      });
+    });
+
+    html += `</tbody></table></div>`;
+    area.innerHTML = html;
+  }
+
+  function renderGrid(data, area) {
+    let html = `<div class="grid-view">`;
+    data.forEach(r => {
+      const bg = getColor(r.nome);
+      html += `<div class="grid-card">
+        <div class="card-top">
+          <div class="card-avatar" style="color:${bg}">${getInitials(r.nome)}</div>
+          <div>
+            <div class="card-name">${r.nome}</div>
+            <div class="card-cargo">${r.cargo}</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-row green"><i class="fas fa-sitemap"></i><span class="val">${r.setor}</span></div>
+          <div class="card-row blue"><i class="fas fa-phone"></i><span class="val bold">${r.ramal}</span></div>
+          <div class="card-row blue"><i class="fas fa-envelope"></i><a href="mailto:${r.email}" class="val">${r.email}</a></div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    area.innerHTML = html;
+  }
+
+  loadSetores();
+  loadRamais();
+</script>
+</body>
+</html>
