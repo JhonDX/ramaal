@@ -646,7 +646,7 @@
           </td>
           <td><span class="setor-badge">${r.setor}</span></td>
           <td><div class="ramal-num"><i class="fas fa-phone"></i>${r.ramal}</div></td>
-          <td><a class="email-link" href="mailto:${r.email}"><i class="fas fa-envelope"></i>${r.email}</a></td>
+          <td>${r.email ? `<a class="email-link" href="mailto:${r.email}"><i class="fas fa-envelope"></i>${r.email}</a>` : '<span style="color:var(--gray-400)">—</span>'}</td>
         </tr>`;
       });
     });
@@ -670,7 +670,7 @@
         <div class="card-body">
           <div class="card-row green"><i class="fas fa-sitemap"></i><span class="val">${r.setor}</span></div>
           <div class="card-row blue"><i class="fas fa-phone"></i><span class="val bold">${r.ramal}</span></div>
-          <div class="card-row blue"><i class="fas fa-envelope"></i><a href="mailto:${r.email}" class="val">${r.email}</a></div>
+          <div class="card-row blue"><i class="fas fa-envelope"></i>${r.email ? `<a href="mailto:${r.email}" class="val">${r.email}</a>` : '<span class="val" style="color:var(--gray-400)">—</span>'}</div>
         </div>
       </div>`;
     });

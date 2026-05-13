@@ -117,7 +117,7 @@ app.get('/api/admin/ramais', auth, (req, res) => {
 // ADMIN: Create ramal
 app.post('/api/admin/ramais', auth, (req, res) => {
   const { nome, cargo, setor, ramal, email, ativo } = req.body;
-  if (!nome || !cargo || !setor || !ramal || !email)
+  if (!nome || !cargo || !setor || !ramal)
     return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
   const result = db.prepare('INSERT INTO ramais (nome, cargo, setor, ramal, email, ativo) VALUES (?, ?, ?, ?, ?, ?)').run(nome, cargo, setor, ramal, email, ativo ?? 1);
   res.json({ id: result.lastInsertRowid, message: 'Ramal criado com sucesso' });

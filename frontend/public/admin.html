@@ -670,7 +670,7 @@
           <input type="text" id="ramalNum" placeholder="Ex: 1001"/>
         </div>
         <div class="form-field">
-          <label>E-mail *</label>
+          <label>E-mail</label>
           <input type="email" id="ramalEmail" placeholder="Ex: nome@gacc-ba.org.br"/>
         </div>
       </div>
@@ -848,7 +848,7 @@ function renderRamaisTable() {
       <td><div class="tbl-name">${r.nome}</div><div class="tbl-sub">${r.cargo}</div></td>
       <td>${r.setor}</td>
       <td><span class="ramal-pill">${r.ramal}</span></td>
-      <td><a href="mailto:${r.email}" style="color:var(--blue-mid);text-decoration:none;">${r.email}</a></td>
+      <td>${r.email ? `<a href="mailto:${r.email}" style="color:var(--blue-mid);text-decoration:none;">${r.email}</a>` : '<span style="color:var(--gray-400)">—</span>'}</td>
       <td><span class="badge-ativo ${r.ativo ? 'sim' : 'nao'}">${r.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td><div class="actions">
         <button class="btn btn-ghost btn-sm" onclick="openRamalModal(${r.id})"><i class="fas fa-pencil"></i></button>
@@ -895,7 +895,7 @@ async function saveRamal() {
     email: document.getElementById('ramalEmail').value.trim(),
     ativo: document.getElementById('ramalAtivo').checked ? 1 : 0
   };
-  if (!payload.nome || !payload.cargo || !payload.setor || !payload.ramal || !payload.email)
+  if (!payload.nome || !payload.cargo || !payload.setor || !payload.ramal)
     return showToast('Preencha todos os campos obrigatórios', 'error');
   const url = id ? `${API}/admin/ramais/${id}` : `${API}/admin/ramais`;
   const method = id ? 'PUT' : 'POST';
