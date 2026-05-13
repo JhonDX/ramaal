@@ -416,9 +416,59 @@
       thead th:nth-child(3), thead th:nth-child(5) { display: none; }
       tbody td:nth-child(3), tbody td:nth-child(5) { display: none; }
     }
+    /* Botão imprimir */
+    .btn-print {
+      display: flex; align-items: center; gap: 7px;
+      padding: 10px 16px;
+      background: var(--blue-mid);
+      color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 0.88rem; font-family: 'Open Sans', sans-serif;
+      font-weight: 600; cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .btn-print:hover { background: var(--blue-dark); transform: translateY(-1px); }
+    .btn-print i { font-size: 0.95rem; }
+
+    /* Estilos de impressão */
+    @media print {
+      header, .hero-strip, .toolbar, .results-bar, footer { display: none !important; }
+      body { background: #fff !important; }
+      .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 18px;
+        border-bottom: 2px solid #1976d2;
+        padding-bottom: 10px;
+      }
+      .print-header h2 { font-size: 1.3rem; color: #1565c0; margin: 0 0 2px; }
+      .print-header p { font-size: 0.8rem; color: #555; margin: 0; }
+      /* Ocultar cards, exibir apenas tabela */
+      .grid-view { display: none !important; }
+      .table-wrap { display: block !important; box-shadow: none !important; border: none !important; }
+      #contentArea { margin: 0 !important; padding: 0 !important; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+      thead tr { background: #1565c0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      th { background: #1565c0 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 6px 8px; text-align: left; }
+      td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+      tbody tr:nth-child(even) td { background: #f5f8ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .setor-header { background: #e8f5e9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .email-link { color: #1565c0 !important; text-decoration: none !important; }
+      .setor-badge { background: #e3f0fd !important; color: #1565c0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .avatar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      a[href^="tel:"] { color: inherit !important; text-decoration: none !important; }
+      .person-cargo { color: #555 !important; }
+    }
+    .print-header { display: none; }
   </style>
 </head>
 <body>
+
+<div class="print-header">
+  <h2>Lista de Ramais — GACC-BA</h2>
+  <p id="print-subtitle">Grupo de Apoio à Criança com Câncer</p>
+</div>
 
 <header>
   <div class="header-inner">
@@ -478,6 +528,9 @@
     <button class="view-btn active" id="btnTable" onclick="setView('table')" title="Tabela"><i class="fas fa-list"></i></button>
     <button class="view-btn" id="btnGrid" onclick="setView('grid')" title="Cards"><i class="fas fa-grip"></i></button>
   </div>
+  <button class="btn-print" onclick="imprimirLista()" title="Imprimir lista de ramais">
+    <i class="fas fa-print"></i> Imprimir
+  </button>
 </div>
 
 <div class="results-bar">
@@ -627,6 +680,27 @@
 
   loadSetores();
   loadRamais();
+
+  function imprimirLista() {
+    // Garante que a view tabela está ativa antes de imprimir
+    if (currentView !== 'table') setView('table');
+
+    // Atualiza subtítulo com filtro ativo
+    const setor = document.getElementById('setorFilter').value;
+    const q = document.getElementById('searchInput').value.trim();
+    let sub = 'Grupo de Apoio à Criança com Câncer';
+    if (setor) sub += ' · Setor: ' + setor;
+    if (q) sub += ' · Busca: "' + q + '"';
+    const d = new Date();
+    sub += ' · Emitido em ' + d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('print-subtitle').textContent = sub;
+
+    // Aguarda o DOM atualizar antes de chamar o print
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => window.print());
+    });
+  }
+
 </script>
 </body>
 </html>
