@@ -612,7 +612,7 @@
           </div>
           <div style="overflow-x:auto">
             <table class="admin-table">
-              <thead><tr><th>Colaborador</th><th>Setor</th><th>Ramal</th><th>E-mail</th><th>Status</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Colaborador</th><th>Setor</th><th>Ramal</th><th>E-mail</th><th>Posição</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="ramalBody"></tbody>
             </table>
           </div>
@@ -672,6 +672,10 @@
         <div class="form-field">
           <label>E-mail</label>
           <input type="email" id="ramalEmail" placeholder="Ex: nome@gacc-ba.org.br"/>
+        </div>
+        <div class="form-field">
+          <label>Posição</label>
+          <input type="number" id="ramalPosicao" placeholder="Ex: 1" min="0" style="width:120px"/>
         </div>
       </div>
       <div class="form-field">
@@ -849,13 +853,14 @@ function renderRamaisTable() {
       <td>${r.setor}</td>
       <td><span class="ramal-pill">${r.ramal}</span></td>
       <td>${r.email ? `<a href="mailto:${r.email}" style="color:var(--blue-mid);text-decoration:none;">${r.email}</a>` : '<span style="color:var(--gray-400)">—</span>'}</td>
+      <td style="text-align:center"><span style="display:inline-block;min-width:28px;padding:2px 8px;border-radius:20px;background:var(--blue-light);color:var(--blue-dark);font-weight:700;font-size:0.8rem">${r.posicao ?? 0}</span></td>
       <td><span class="badge-ativo ${r.ativo ? 'sim' : 'nao'}">${r.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td><div class="actions">
         <button class="btn btn-ghost btn-sm" onclick="openRamalModal(${r.id})"><i class="fas fa-pencil"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deleteRamal(${r.id}, '${r.nome.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
       </div></td>
     </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum ramal encontrado</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum ramal encontrado</td></tr>';
 }
 
 function renderRecentTable() {
@@ -881,6 +886,7 @@ function openRamalModal(id) {
   document.getElementById('ramalSetor').value = r?.setor || '';
   document.getElementById('ramalNum').value = r?.ramal || '';
   document.getElementById('ramalEmail').value = r?.email || '';
+  document.getElementById('ramalPosicao').value = r?.posicao ?? 0;
   document.getElementById('ramalAtivo').checked = r ? !!r.ativo : true;
   openModal('ramalModal');
 }
@@ -893,6 +899,7 @@ async function saveRamal() {
     setor: document.getElementById('ramalSetor').value.trim(),
     ramal: document.getElementById('ramalNum').value.trim(),
     email: document.getElementById('ramalEmail').value.trim(),
+    posicao: parseInt(document.getElementById('ramalPosicao').value) || 0,
     ativo: document.getElementById('ramalAtivo').checked ? 1 : 0
   };
   if (!payload.nome || !payload.cargo || !payload.setor || !payload.ramal)

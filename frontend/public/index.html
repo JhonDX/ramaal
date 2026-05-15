@@ -616,9 +616,13 @@
   }
 
   function renderTable(data, area) {
-    // Group by setor
+    // Group by setor preservando a ordem que veio do backend (por posicao)
     const groups = {};
-    data.forEach(r => { if (!groups[r.setor]) groups[r.setor] = []; groups[r.setor].push(r); });
+    const setorOrder = [];
+    data.forEach(r => {
+      if (!groups[r.setor]) { groups[r.setor] = []; setorOrder.push(r.setor); }
+      groups[r.setor].push(r);
+    });
 
     let html = `<div class="table-wrap"><table>
       <thead><tr>
@@ -628,7 +632,7 @@
         <th>E-mail</th>
       </tr></thead><tbody>`;
 
-    Object.keys(groups).sort().forEach(setor => {
+    setorOrder.forEach(setor => {
       html += `<tr><td colspan="4" style="padding:0">
         <div class="setor-header"><i class="fas fa-sitemap"></i>${setor}</div>
       </td></tr>`;

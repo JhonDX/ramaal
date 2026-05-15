@@ -33,14 +33,17 @@ db.exec(`
     cargo TEXT NOT NULL,
     setor TEXT NOT NULL,
     ramal TEXT NOT NULL,
-    email TEXT NOT NULL,
+    email TEXT,
+    posicao INTEGER DEFAULT 0,
     ativo INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
-// Seed default admin
+// Migration: add posicao column if not exists (for existing DBs)
+try { db.exec('ALTER TABLE ramais ADD COLUMN posicao INTEGER DEFAULT 0'); } catch (_) {}
+try { db.exec('ALTER TABLE ramais ADD COLUMN email TEXT'); } catch (_) {}
 const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!existingAdmin) {
   const hash = bcrypt.hashSync('admin123', 10);
@@ -51,17 +54,17 @@ if (!existingAdmin) {
 const count = db.prepare('SELECT COUNT(*) as c FROM ramais').get();
 if (count.c === 0) {
   const ramaisSample = [
-    { nome: 'Ana Paula Souza', cargo: 'Assistente Social', setor: 'Serviço Social', ramal: '1001', email: 'ana.paula@gacc-ba.org.br' },
-    { nome: 'Carlos Eduardo Lima', cargo: 'Médico Oncologista', setor: 'Oncologia', ramal: '1002', email: 'carlos.lima@gacc-ba.org.br' },
-    { nome: 'Fernanda Oliveira', cargo: 'Enfermeira Chefe', setor: 'Enfermagem', ramal: '1003', email: 'fernanda.oliveira@gacc-ba.org.br' },
-    { nome: 'Roberto Santos', cargo: 'Diretor Executivo', setor: 'Diretoria', ramal: '1000', email: 'diretor@gacc-ba.org.br' },
-    { nome: 'Mariana Costa', cargo: 'Psicóloga', setor: 'Psicologia', ramal: '1004', email: 'mariana.costa@gacc-ba.org.br' },
-    { nome: 'João Batista', cargo: 'Coordenador de TI', setor: 'Tecnologia', ramal: '1005', email: 'joao.ti@gacc-ba.org.br' },
-    { nome: 'Luciana Ferreira', cargo: 'Nutricionista', setor: 'Nutrição', ramal: '1006', email: 'luciana.ferreira@gacc-ba.org.br' },
-    { nome: 'Pedro Henrique', cargo: 'Recepcionista', setor: 'Recepção', ramal: '1007', email: 'recepcao@gacc-ba.org.br' },
+    { nome: 'Ana Paula Souza', cargo: 'Assistente Social', setor: 'Serviço Social', ramal: '1001', email: 'ana.paula@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Carlos Eduardo Lima', cargo: 'Médico Oncologista', setor: 'Oncologia', ramal: '1002', email: 'carlos.lima@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Fernanda Oliveira', cargo: 'Enfermeira Chefe', setor: 'Enfermagem', ramal: '1003', email: 'fernanda.oliveira@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Roberto Santos', cargo: 'Diretor Executivo', setor: 'Diretoria', ramal: '1000', email: 'diretor@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Mariana Costa', cargo: 'Psicóloga', setor: 'Psicologia', ramal: '1004', email: 'mariana.costa@gacc-ba.org.br', posicao: 1 },
+    { nome: 'João Batista', cargo: 'Coordenador de TI', setor: 'Tecnologia', ramal: '1005', email: 'joao.ti@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Luciana Ferreira', cargo: 'Nutricionista', setor: 'Nutrição', ramal: '1006', email: 'luciana.ferreira@gacc-ba.org.br', posicao: 1 },
+    { nome: 'Pedro Henrique', cargo: 'Recepcionista', setor: 'Recepção', ramal: '1007', email: 'recepcao@gacc-ba.org.br', posicao: 1 },
   ];
-  const insert = db.prepare('INSERT INTO ramais (nome, cargo, setor, ramal, email) VALUES (?, ?, ?, ?, ?)');
-  ramaisSample.forEach(r => insert.run(r.nome, r.cargo, r.setor, r.ramal, r.email));
+  const insert = db.prepare('INSERT INTO ramais (nome, cargo, setor, ramal, email, posicao) VALUES (?, ?, ?, ?, ?, ?)');
+  ramaisSample.forEach(r => insert.run(r.nome, r.cargo, r.setor, r.ramal, r.email, r.posicao));
 }
 
 app.use(cors());
@@ -99,7 +102,7 @@ app.get('/api/ramais', (req, res) => {
     params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (setor) { query += ' AND setor = ?'; params.push(setor); }
-  query += ' ORDER BY setor, nome';
+  query += ' ORDER BY CASE WHEN posicao = 0 OR posicao IS NULL THEN 1 ELSE 0 END, posicao ASC, setor, nome';
   res.json(db.prepare(query).all(...params));
 });
 
@@ -111,22 +114,22 @@ app.get('/api/setores', (req, res) => {
 
 // ADMIN: All ramais (including inactive)
 app.get('/api/admin/ramais', auth, (req, res) => {
-  res.json(db.prepare('SELECT * FROM ramais ORDER BY setor, nome').all());
+  res.json(db.prepare('SELECT * FROM ramais ORDER BY CASE WHEN posicao = 0 OR posicao IS NULL THEN 1 ELSE 0 END, posicao ASC, setor, nome').all());
 });
 
 // ADMIN: Create ramal
 app.post('/api/admin/ramais', auth, (req, res) => {
-  const { nome, cargo, setor, ramal, email, ativo } = req.body;
+  const { nome, cargo, setor, ramal, email, ativo, posicao } = req.body;
   if (!nome || !cargo || !setor || !ramal)
     return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
-  const result = db.prepare('INSERT INTO ramais (nome, cargo, setor, ramal, email, ativo) VALUES (?, ?, ?, ?, ?, ?)').run(nome, cargo, setor, ramal, email, ativo ?? 1);
+  const result = db.prepare('INSERT INTO ramais (nome, cargo, setor, ramal, email, ativo, posicao) VALUES (?, ?, ?, ?, ?, ?, ?)').run(nome, cargo, setor, ramal, email || '', ativo ?? 1, posicao ?? 0);
   res.json({ id: result.lastInsertRowid, message: 'Ramal criado com sucesso' });
 });
 
 // ADMIN: Update ramal
 app.put('/api/admin/ramais/:id', auth, (req, res) => {
-  const { nome, cargo, setor, ramal, email, ativo } = req.body;
-  db.prepare('UPDATE ramais SET nome=?, cargo=?, setor=?, ramal=?, email=?, ativo=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(nome, cargo, setor, ramal, email, ativo, req.params.id);
+  const { nome, cargo, setor, ramal, email, ativo, posicao } = req.body;
+  db.prepare('UPDATE ramais SET nome=?, cargo=?, setor=?, ramal=?, email=?, ativo=?, posicao=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(nome, cargo, setor, ramal, email || '', ativo, posicao ?? 0, req.params.id);
   res.json({ message: 'Ramal atualizado com sucesso' });
 });
 
