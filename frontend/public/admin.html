@@ -4,19 +4,25 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin · Lista de Ramais · GACC-BA</title>
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"/>
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
     :root {
-      --blue-dark:   #0d3b6e;
-      --blue:        #1565c0;
-      --blue-mid:    #1976d2;
-      --blue-light:  #e3f0fc;
-      --green-dark:  #1b5e20;
-      --green:       #2e7d32;
-      --green-mid:   #388e3c;
-      --green-light: #e8f5e9;
-      --yellow:      #f9a825;
+      /* Paleta do site gaccbahia.org.br */
+      --blue-dark:   #183e70;
+      --blue:        #225495;
+      --blue-mid:    #2b62a8;
+      --blue-light:  #eaf1fa;
+      --green-dark:  #2f7a45;
+      --green:       #47985e;
+      --green-mid:   #47985e;
+      --green-light: #eaf5ed;
+      --yellow:      #ebbb43;
+      --cream:       #fef8ed;
       --red:         #c62828;
       --red-light:   #ffebee;
       --white:       #ffffff;
@@ -35,12 +41,17 @@
     #loginScreen {
       display: flex; align-items: center; justify-content: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--green-dark) 100%);
+      background:
+        radial-gradient(circle at 85% 15%, rgba(255,255,255,0.10), transparent 45%),
+        linear-gradient(110deg, var(--blue) 0%, #2a5c9e 55%, var(--blue-dark) 100%);
+      border-top: 6px solid var(--yellow);
+      padding: 24px 16px;
     }
     .login-card {
       background: var(--white);
-      border-radius: 20px;
-      padding: 48px 40px;
+      border-radius: 22px;
+      border-bottom: 6px solid var(--yellow);
+      padding: 44px 40px;
       width: 100%;
       max-width: 420px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -49,15 +60,7 @@
       text-align: center;
       margin-bottom: 32px;
     }
-    .login-logo .icon-wrap {
-      width: 72px; height: 72px;
-      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
-      border-radius: 50%;
-      display: inline-flex; align-items: center; justify-content: center;
-      margin-bottom: 12px;
-      box-shadow: 0 8px 24px rgba(21,101,192,0.4);
-    }
-    .login-logo .icon-wrap i { font-size: 1.8rem; color: var(--white); }
+    .login-logo img { height: 76px; width: auto; display: block; margin: 0 auto 18px; }
     .login-logo h2 {
       font-family: 'Montserrat', sans-serif;
       font-size: 1.4rem;
@@ -91,14 +94,14 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .form-group input:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+    .form-group input:focus { border-color: var(--blue); background: var(--cream); box-shadow: 0 0 0 4px rgba(235,187,67,0.35); }
     .btn-login {
       width: 100%;
       padding: 14px;
-      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
-      color: var(--white);
+      background: var(--yellow);
+      color: var(--blue-dark);
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       font-family: 'Montserrat', sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
@@ -107,7 +110,7 @@
       transition: all 0.2s;
       margin-top: 8px;
     }
-    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(13,59,110,0.35); }
+    .btn-login:hover { background: #d9a52a; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(235,187,67,0.45); }
     .error-msg {
       background: var(--red-light);
       color: var(--red);
@@ -126,7 +129,8 @@
     /* ─── SIDEBAR ─── */
     .sidebar {
       width: var(--sidebar-w);
-      background: linear-gradient(180deg, var(--blue-dark) 0%, #0a2d55 100%);
+      background: var(--blue);
+      border-top: 6px solid var(--yellow);
       display: flex; flex-direction: column;
       position: fixed; top: 0; left: 0; bottom: 0;
       z-index: 200;
@@ -135,6 +139,14 @@
       padding: 24px 20px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
+    .sidebar-logo .logo-chip {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .sidebar-logo .logo-chip img { height: 52px; width: auto; display: block; }
     .sidebar-logo .badge {
       display: inline-block;
       background: var(--yellow);
@@ -215,8 +227,8 @@
     .btn-back {
       width: 100%;
       padding: 10px;
-      background: rgba(249,168,37,0.15);
-      border: 1px solid rgba(249,168,37,0.3);
+      background: rgba(235,187,67,0.15);
+      border: 1px solid rgba(235,187,67,0.3);
       border-radius: 8px;
       color: var(--yellow);
       font-size: 0.83rem;
@@ -226,7 +238,7 @@
       margin-bottom: 8px;
       text-decoration: none;
     }
-    .btn-back:hover { background: rgba(249,168,37,0.25); }
+    .btn-back:hover { background: rgba(235,187,67,0.25); }
 
     /* ─── MAIN CONTENT ─── */
     .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
@@ -435,7 +447,7 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .form-field input:focus, .form-field select:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(25,118,210,0.08); }
+    .form-field input:focus, .form-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(235,187,67,0.3); }
     .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
     .toggle { position: relative; width: 44px; height: 24px; }
     .toggle input { opacity: 0; width: 0; height: 0; }
@@ -508,7 +520,7 @@
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="icon-wrap"><i class="fas fa-shield-alt"></i></div>
+      <img src="logo-gacc.png" alt="GACC-BA · Grupo de Apoio à Criança com Câncer - Bahia"/>
       <h2>Painel Administrativo</h2>
       <p>Sistema de Ramais · GACC-BA</p>
     </div>
@@ -539,6 +551,7 @@
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sidebar-logo">
+        <a href="index.html" class="logo-chip" title="Ver lista pública"><img src="logo-gacc.png" alt="GACC-BA"/></a>
         <div class="badge">Admin</div>
         <h2>GACC-BA</h2>
         <p>Painel de Administração</p>
