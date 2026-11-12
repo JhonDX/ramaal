@@ -90,6 +90,14 @@ try { db.exec("ALTER TABLE users ADD COLUMN origem TEXT DEFAULT 'local'"); } cat
 try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ativo INTEGER DEFAULT 1'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ultimo_login DATETIME'); } catch (_) {}
+// De onde veio o vínculo usuário ↔ grupo: 'manual' (feito no admin) ou 'ldap'
+// (sincronizado pelo memberOf no login). O login só remove vínculos 'ldap'.
+try {
+  db.exec("ALTER TABLE user_grupos ADD COLUMN origem TEXT DEFAULT 'manual'");
+  db.exec(`UPDATE user_grupos SET origem = 'ldap'
+    WHERE user_id IN (SELECT id FROM users WHERE origem = 'ldap')
+      AND grupo_id IN (SELECT id FROM grupos WHERE TRIM(COALESCE(ldap_grupos, '')) <> '')`);
+} catch (_) {}
 
 // Grupo "Administradores": tem sempre todas as permissões e não pode ser excluído.
 let adminGroup = db.prepare('SELECT id FROM grupos WHERE sistema = 1').get();
@@ -159,7 +167,7 @@ function parsePerms(json) {
   try { return JSON.parse(json || '[]').filter(p => PERMISSION_KEYS.includes(p)); } catch (_) { return []; }
 }
 function userGroups(userId) {
-  return db.prepare(`SELECT g.id, g.nome, g.permissoes FROM grupos g
+  return db.prepare(`SELECT g.id, g.nome, g.permissoes, ug.origem FROM grupos g
     JOIN user_grupos ug ON ug.grupo_id = g.id WHERE ug.user_id = ? ORDER BY g.nome`).all(userId);
 }
 function userPermissions(userId) {
@@ -171,7 +179,7 @@ function publicUser(u) {
   return {
     id: u.id, username: u.username, name: u.name, email: u.email || '',
     origem: u.origem || 'local', ativo: u.ativo ?? 1,
-    grupos: userGroups(u.id).map(g => ({ id: g.id, nome: g.nome })),
+    grupos: userGroups(u.id).map(g => ({ id: g.id, nome: g.nome, origem: g.origem || 'manual' })),
     permissoes: userPermissions(u.id),
   };
 }
@@ -218,8 +226,9 @@ const can = perm => (req, res, next) =>
 function syncLdapGroups(userId, memberOf, cfg) {
   const grupos = db.prepare('SELECT id, ldap_grupos FROM grupos').all();
   const mapped = grupos.filter(g => (g.ldap_grupos || '').trim());
-  const del = db.prepare('DELETE FROM user_grupos WHERE user_id = ? AND grupo_id = ?');
-  const ins = db.prepare('INSERT OR IGNORE INTO user_grupos (user_id, grupo_id) VALUES (?, ?)');
+  // Vínculos feitos à mão no admin nunca são removidos pela sincronização.
+  const del = db.prepare("DELETE FROM user_grupos WHERE user_id = ? AND grupo_id = ? AND origem = 'ldap'");
+  const ins = db.prepare("INSERT OR IGNORE INTO user_grupos (user_id, grupo_id, origem) VALUES (?, ?, 'ldap')");
   mapped.forEach(g => {
     const values = g.ldap_grupos.split(/\r?\n|;/);
     if (ldap.matchesGroup(memberOf, values)) ins.run(userId, g.id); else del.run(userId, g.id);
@@ -334,9 +343,13 @@ app.delete('/api/admin/ramais/:id', auth, can('ramais.gerenciar'), (req, res) =>
 function setUserGroups(userId, grupoIds) {
   if (!Array.isArray(grupoIds)) return;
   const valid = new Set(db.prepare('SELECT id FROM grupos').all().map(g => g.id));
-  db.prepare('DELETE FROM user_grupos WHERE user_id = ?').run(userId);
-  const ins = db.prepare('INSERT OR IGNORE INTO user_grupos (user_id, grupo_id) VALUES (?, ?)');
-  grupoIds.map(Number).filter(id => valid.has(id)).forEach(id => ins.run(userId, id));
+  const wanted = new Set(grupoIds.map(Number).filter(id => valid.has(id)));
+  // Remove só o que foi desmarcado; os que continuam mantêm a origem (manual/ldap).
+  db.prepare('SELECT grupo_id FROM user_grupos WHERE user_id = ?').all(userId)
+    .filter(r => !wanted.has(r.grupo_id))
+    .forEach(r => db.prepare('DELETE FROM user_grupos WHERE user_id = ? AND grupo_id = ?').run(userId, r.grupo_id));
+  const ins = db.prepare("INSERT OR IGNORE INTO user_grupos (user_id, grupo_id, origem) VALUES (?, ?, 'manual')");
+  wanted.forEach(id => ins.run(userId, id));
 }
 const sendError = (res, e, fallback) => res.status(e.status || 400).json({ error: e.status ? e.message : fallback });
 
@@ -461,6 +474,61 @@ app.delete('/api/admin/grupos/:id', auth, can('grupos.gerenciar'), (req, res) =>
   } catch (e) {
     sendError(res, e, 'Não foi possível remover o grupo');
   }
+});
+
+// ─── BUSCAR E IMPORTAR USUÁRIOS DO AD ───
+function ldapReady(res) {
+  const cfg = getLdapConfig();
+  if (!cfg.url || !cfg.base_dn) { res.status(400).json({ error: 'Configure a integração LDAP antes de buscar usuários no AD' }); return null; }
+  return cfg;
+}
+
+// Busca pessoas no AD e indica quem já está cadastrado e em quais grupos.
+app.get('/api/admin/ldap/users', auth, can('usuarios.gerenciar'), async (req, res) => {
+  const cfg = ldapReady(res); if (!cfg) return;
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.status(400).json({ error: 'Digite pelo menos 2 letras para buscar' });
+  try {
+    const { users, truncado } = await ldap.searchUsers(cfg, q);
+    const local = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE');
+    res.json({
+      truncado,
+      usuarios: users.map(u => {
+        const existing = local.get(u.username);
+        return { ...u, cadastrado: existing ? { id: existing.id, origem: existing.origem, grupos: userGroups(existing.id).map(g => g.id) } : null };
+      }),
+    });
+  } catch (e) {
+    res.status(502).json({ error: 'Erro ao buscar no AD: ' + e.message });
+  }
+});
+
+// Cadastra (se ainda não existir) os usuários escolhidos do AD e os adiciona aos grupos.
+// Não tira ninguém de grupos que já tinha.
+app.post('/api/admin/ldap/import', auth, can('usuarios.gerenciar'), (req, res) => {
+  const lista = Array.isArray(req.body.usuarios) ? req.body.usuarios : [];
+  const valid = new Set(db.prepare('SELECT id FROM grupos').all().map(g => g.id));
+  const grupos = (req.body.grupos || []).map(Number).filter(id => valid.has(id));
+  if (!lista.length) return res.status(400).json({ error: 'Selecione pelo menos um usuário' });
+  if (!grupos.length) return res.status(400).json({ error: 'Selecione pelo menos um grupo' });
+  let criados = 0, vinculados = 0;
+  db.transaction(() => {
+    const find = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE');
+    const create = db.prepare("INSERT INTO users (username, password, name, email, origem, role) VALUES (?, '!', ?, ?, 'ldap', '')");
+    const link = db.prepare("INSERT OR IGNORE INTO user_grupos (user_id, grupo_id, origem) VALUES (?, ?, 'manual')");
+    lista.forEach(u => {
+      const username = String(u.username || '').trim().toLowerCase();
+      if (!username) return;
+      let user = find.get(username);
+      if (!user) {
+        const r = create.run(username, String(u.name || username), String(u.email || ''));
+        user = { id: r.lastInsertRowid };
+        criados++;
+      }
+      grupos.forEach(g => { vinculados += link.run(user.id, g).changes; });
+    });
+  })();
+  res.json({ message: `${lista.length} usuário(s) vinculados (${criados} novo(s) cadastrado(s))`, criados, vinculados });
 });
 
 // ─── CONFIGURAÇÃO LDAP ───

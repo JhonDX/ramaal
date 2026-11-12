@@ -441,6 +441,21 @@
     .origem-switch { display: flex; gap: 8px; }
     .origem-switch label { flex: 1; text-transform: none; letter-spacing: 0; }
 
+    /* ─── BUSCAR NO AD ─── */
+    .ad-search { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ad-search input { flex: 1; }
+    .ad-results { border: 1.5px solid var(--gray-200); border-radius: 10px; max-height: 300px; overflow-y: auto; }
+    .ad-results .empty { padding: 22px; text-align: center; color: var(--gray-400); font-size: 0.85rem; }
+    .ad-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--gray-100); cursor: pointer; }
+    .ad-row:last-child { border-bottom: none; }
+    .ad-row:hover { background: var(--cream); }
+    .ad-row input { width: 16px; height: 16px; accent-color: var(--blue); flex-shrink: 0; }
+    .ad-row .who { flex: 1; min-width: 0; }
+    .ad-row .who .n { font-weight: 600; color: var(--blue-dark); font-size: 0.88rem; }
+    .ad-row .who .s { font-size: 0.76rem; color: var(--gray-400); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ad-toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--gray-600); margin: 8px 2px 16px; }
+    .ad-toolbar a { color: var(--blue); cursor: pointer; font-weight: 600; }
+
     /* ─── CONFIGURAÇÕES LDAP ─── */
     .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; padding: 24px; }
     .config-grid .full { grid-column: 1 / -1; }
@@ -681,6 +696,7 @@
             <h4><i class="fas fa-users-cog"></i> Usuários do Sistema</h4>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="userSearch" placeholder="Buscar…" oninput="renderUsersTable()"/></div>
+              <button class="btn btn-primary" onclick="openAdModal()"><i class="fas fa-network-wired"></i> Adicionar do AD</button>
               <button class="btn btn-success" onclick="openUserModal()"><i class="fas fa-plus"></i> Novo Usuário</button>
             </div>
           </div>
@@ -954,6 +970,39 @@
   </div>
 </div>
 
+<!-- MODAL ADICIONAR DO AD -->
+<div class="modal-overlay" id="adModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h4><i class="fas fa-network-wired"></i> Adicionar usuários do AD</h4>
+      <button class="modal-close" onclick="closeModal('adModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field" style="margin-bottom:0">
+        <label>1. Buscar no AD</label>
+        <div class="ad-search">
+          <input type="text" id="adQuery" placeholder="Nome, login ou e-mail (mín. 2 letras)" onkeydown="if(event.key==='Enter') searchAd()"/>
+          <button class="btn btn-primary" onclick="searchAd()"><i class="fas fa-search"></i> Buscar</button>
+        </div>
+      </div>
+      <div class="ad-results" id="adResults"><div class="empty">Busque pelo nome, login ou e-mail.</div></div>
+      <div class="ad-toolbar">
+        <span id="adSelCount">Nenhum selecionado</span>
+        <a onclick="toggleAllAd()" id="adToggleAll" style="display:none">Selecionar todos</a>
+      </div>
+      <div class="form-field">
+        <label>2. Vincular aos grupos</label>
+        <div class="check-list" id="adGruposList"></div>
+        <span class="hint">Quem ainda não tem cadastro é criado como usuário da rede (entra com login e senha do AD). Quem já tem cadastro só ganha os grupos marcados; os grupos que já tinha continuam.</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('adModal')">Cancelar</button>
+      <button class="btn btn-primary" id="adSubmit" onclick="importAd()"><i class="fas fa-link"></i> Vincular</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
@@ -1204,7 +1253,7 @@ function renderUsersTable() {
       <td><div class="tbl-name">${esc(u.name)}</div>${u.email ? `<div class="tbl-sub">${esc(u.email)}</div>` : ''}</td>
       <td><code style="background:var(--gray-100);padding:2px 8px;border-radius:4px;font-size:0.82rem">${esc(u.username)}</code></td>
       <td>${u.origem === 'ldap' ? '<span class="chip yellow"><i class="fas fa-network-wired"></i> LDAP</span>' : '<span class="chip gray"><i class="fas fa-key"></i> Local</span>'}</td>
-      <td><div class="chips">${u.grupos.map(g => `<span class="chip">${esc(g.nome)}</span>`).join('') || '<span style="color:var(--red);font-size:.78rem">Sem grupo</span>'}</div></td>
+      <td><div class="chips">${u.grupos.map(g => `<span class="chip" ${g.origem === 'ldap' ? 'title="Vem do grupo do AD (sincronizado no login)"' : ''}>${esc(g.nome)}${g.origem === 'ldap' ? ' <i class="fas fa-sync-alt" style="font-size:.6rem;opacity:.6"></i>' : ''}</span>`).join('') || '<span style="color:var(--red);font-size:.78rem">Sem grupo</span>'}</div></td>
       <td><span class="badge-ativo ${u.ativo ? 'sim' : 'nao'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td style="color:var(--gray-600);font-size:0.8rem">${fmtDate(u.ultimo_login)}</td>
       <td><div class="actions">
@@ -1319,6 +1368,7 @@ function renderGruposTable() {
       <td><div class="chips">${g.ldap_grupos.map(v => `<span class="chip yellow" title="${esc(v)}">${esc(v.length > 34 ? v.slice(0, 32) + '…' : v)}</span>`).join('') || '<span style="color:var(--gray-400)">—</span>'}</div></td>
       <td style="text-align:center"><span class="ramal-pill">${g.membros}</span></td>
       <td><div class="actions">
+        ${can('usuarios.gerenciar') ? `<button class="btn btn-primary btn-sm" title="Adicionar usuários do AD a este grupo" onclick="openAdModal(${g.id})"><i class="fas fa-user-plus"></i></button>` : ''}
         <button class="btn btn-ghost btn-sm" title="Editar" onclick="openGrupoModal(${g.id})"><i class="fas fa-pencil"></i></button>
         ${g.sistema ? '' : `<button class="btn btn-danger btn-sm" title="Excluir" onclick="deleteGrupo(${g.id})"><i class="fas fa-trash"></i></button>`}
       </div></td>
@@ -1373,6 +1423,95 @@ function deleteGrupo(id) {
       if (can('usuarios.gerenciar')) loadUsers();
     } catch (e) { showToast(e.message, 'error'); }
   });
+}
+
+// ─── ADICIONAR USUÁRIOS DO AD ───
+let adResults = [], adTruncado = false;
+const adSelected = new Map(); // username -> {username, name, email}
+
+async function openAdModal(grupoId) {
+  if (!allGrupos.length) await loadGrupos();
+  adResults = []; adSelected.clear();
+  document.getElementById('adQuery').value = '';
+  document.getElementById('adResults').innerHTML = '<div class="empty">Busque pelo nome, login ou e-mail.</div>';
+  document.getElementById('adGruposList').innerHTML = allGrupos.map(g => `
+    <label class="check-item">
+      <input type="checkbox" value="${g.id}" ${g.id === grupoId ? 'checked' : ''}/>
+      <div><div class="t">${esc(g.nome)}</div><div class="d">${esc(g.descricao || permLabels(g.permissoes) || 'Sem permissões')}</div></div>
+    </label>`).join('');
+  updateAdCount();
+  openModal('adModal');
+  setTimeout(() => document.getElementById('adQuery').focus(), 50);
+}
+
+async function searchAd() {
+  const q = document.getElementById('adQuery').value.trim();
+  if (q.length < 2) return showToast('Digite pelo menos 2 letras', 'error');
+  const box = document.getElementById('adResults');
+  box.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i> Buscando no AD…</div>';
+  try {
+    const r = await api(`/admin/ldap/users?q=${encodeURIComponent(q)}`);
+    adResults = r.usuarios; adTruncado = r.truncado;
+    renderAdResults();
+  } catch (e) {
+    box.innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+function renderAdResults() {
+  const truncado = adTruncado;
+  const box = document.getElementById('adResults');
+  if (!adResults.length) {
+    box.innerHTML = `<div class="empty">${truncado ? 'Muitos resultados. Digite algo mais específico.' : 'Ninguém encontrado no AD com essa busca.'}</div>`;
+  } else {
+    const nomeGrupo = id => allGrupos.find(g => g.id === id)?.nome;
+    box.innerHTML = adResults.map((u, i) => `
+      <label class="ad-row">
+        <input type="checkbox" data-i="${i}" ${adSelected.has(u.username) ? 'checked' : ''} onchange="toggleAd(${i}, this.checked)"/>
+        <div class="who">
+          <div class="n">${esc(u.name)}</div>
+          <div class="s">${esc(u.username)}${u.email ? ' · ' + esc(u.email) : ''}</div>
+        </div>
+        ${u.cadastrado
+          ? `<div class="chips">${u.cadastrado.grupos.map(id => `<span class="chip">${esc(nomeGrupo(id) || '')}</span>`).join('') || '<span class="chip gray">Cadastrado, sem grupo</span>'}</div>`
+          : '<span class="chip yellow">Novo</span>'}
+      </label>`).join('') + (truncado ? '<div class="empty">Mostrando os primeiros resultados. Refine a busca para ver outros.</div>' : '');
+  }
+  document.getElementById('adToggleAll').style.display = adResults.length ? '' : 'none';
+  updateAdCount();
+}
+
+function toggleAd(i, on) {
+  const u = adResults[i];
+  if (on) adSelected.set(u.username, { username: u.username, name: u.name, email: u.email });
+  else adSelected.delete(u.username);
+  updateAdCount();
+}
+
+function toggleAllAd() {
+  const all = adResults.every(u => adSelected.has(u.username));
+  adResults.forEach((u, i) => toggleAd(i, !all));
+  renderAdResults();
+}
+
+function updateAdCount() {
+  const n = adSelected.size;
+  document.getElementById('adSelCount').textContent = n ? `${n} selecionado(s)` : 'Nenhum selecionado';
+  document.getElementById('adSubmit').innerHTML = `<i class="fas fa-link"></i> Vincular${n ? ' ' + n + ' usuário(s)' : ''}`;
+  const all = adResults.length && adResults.every(u => adSelected.has(u.username));
+  document.getElementById('adToggleAll').textContent = all ? 'Desmarcar todos' : 'Selecionar todos';
+}
+
+async function importAd() {
+  const grupos = [...document.querySelectorAll('#adGruposList input:checked')].map(i => Number(i.value));
+  if (!adSelected.size) return showToast('Selecione pelo menos um usuário', 'error');
+  if (!grupos.length) return showToast('Marque pelo menos um grupo', 'error');
+  try {
+    const r = await api('/admin/ldap/import', { method: 'POST', body: JSON.stringify({ usuarios: [...adSelected.values()], grupos }) });
+    showToast(r.message, 'success');
+    closeModal('adModal');
+    loadUsers(); loadGrupos(); loadStats();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 // ─── CONFIGURAÇÃO LDAP ───

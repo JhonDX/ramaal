@@ -82,7 +82,9 @@ Como funciona o login:
 - Os demais são validados no LDAP. No primeiro login o usuário é criado automaticamente, com nome e e-mail vindos do AD.
 - A cada login os grupos mapeados são sincronizados com o `memberOf` do AD: quem sai do grupo no AD perde o grupo no sistema. Grupos sem mapeamento LDAP são mantidos como o admin marcou.
 - Quem não cai em nenhum grupo usa o **grupo padrão** (se configurado); sem ele, o login é recusado.
-- Também dá para pré-cadastrar um usuário LDAP em *Usuários > Novo Usuário > Usuário da rede* e já deixá-lo nos grupos antes do primeiro acesso.
+- **Adicionar do AD:** em *Usuários > Adicionar do AD* (ou no botão <i>+</i> de cada grupo em *Grupos de Permissão*), busque pessoas no AD pelo nome, login ou e-mail, marque quem quiser e escolha os grupos. Quem ainda não tem cadastro é criado como usuário da rede; quem já tem só ganha os grupos marcados.
+- Vínculos feitos à mão no admin nunca são removidos pela sincronização do login; só os que vieram de grupos do AD (marcados com o ícone de sincronização na lista de usuários).
+- Também dá para cadastrar um usuário LDAP um a um em *Usuários > Novo Usuário > Usuário da rede*.
 - A senha do usuário de serviço fica salva no banco e nunca é devolvida para o navegador.
 
 > Grupos aninhados do AD (grupo dentro de grupo) não são resolvidos: o usuário precisa ser membro direto do grupo mapeado.
