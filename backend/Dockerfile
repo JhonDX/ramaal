@@ -5,7 +5,7 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 COPY package.json .
 RUN npm install
-COPY server.js .
+COPY server.js ldap.js ./
 
 VOLUME ["/data"]
 EXPOSE 3001

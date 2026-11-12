@@ -422,6 +422,38 @@
       overflow-y: auto;
     }
     .modal-overlay.open .modal { transform: scale(1); }
+    .modal.wide { max-width: 640px; }
+
+    /* ─── GRUPOS / PERMISSÕES ─── */
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.72rem; font-weight: 600; background: var(--blue-light); color: var(--blue-dark); white-space: nowrap; }
+    .chip.green { background: var(--green-light); color: var(--green-dark); }
+    .chip.yellow { background: var(--cream); color: #8a6512; border: 1px solid rgba(235,187,67,0.5); }
+    .chip.gray { background: var(--gray-100); color: var(--gray-600); }
+    .check-list { display: grid; gap: 8px; }
+    .check-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
+    .check-item:hover { border-color: var(--blue); }
+    .form-field label.check-item { display: flex; text-transform: none; letter-spacing: 0; font-weight: 400; margin: 0; color: inherit; font-size: inherit; }
+    .form-field .check-item input { margin-top: 3px; width: 16px; height: 16px; padding: 0; accent-color: var(--blue); flex-shrink: 0; }
+    .check-item .t { font-weight: 600; font-size: 0.86rem; color: var(--blue-dark); }
+    .check-item .d { font-size: 0.76rem; color: var(--gray-400); }
+    .check-item.disabled { opacity: .65; cursor: not-allowed; }
+    .origem-switch { display: flex; gap: 8px; }
+    .origem-switch label { flex: 1; text-transform: none; letter-spacing: 0; }
+
+    /* ─── CONFIGURAÇÕES LDAP ─── */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; padding: 24px; }
+    .config-grid .full { grid-column: 1 / -1; }
+    .config-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--gray-200); flex-wrap: wrap; }
+    .ldap-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; }
+    .ldap-status.on { background: var(--green-light); color: var(--green-dark); }
+    .ldap-status.off { background: var(--gray-100); color: var(--gray-600); }
+    .test-result { margin: 0 24px 24px; padding: 14px 16px; border-radius: 10px; font-size: 0.84rem; display: none; line-height: 1.6; word-break: break-word; }
+    .test-result.ok { display: block; background: var(--green-light); color: var(--green-dark); }
+    .test-result.err { display: block; background: var(--red-light); color: var(--red); }
+    .test-result code { background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; }
+    .muted-note { font-size: 0.8rem; color: var(--gray-600); padding: 0 24px 4px; line-height: 1.5; }
+    @media (max-width: 760px) { .config-grid, .form-row { grid-template-columns: 1fr; } }
     .modal-header {
       padding: 22px 24px 18px;
       border-bottom: 1px solid var(--gray-200);
@@ -437,7 +469,7 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .form-field { margin-bottom: 16px; }
     .form-field label { display: block; font-size: 0.79rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
-    .form-field input, .form-field select {
+    .form-field input, .form-field select, .form-field textarea {
       width: 100%;
       padding: 10px 13px;
       border: 1.5px solid var(--gray-200);
@@ -447,7 +479,10 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .form-field input:focus, .form-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(235,187,67,0.3); }
+    .form-field textarea { resize: vertical; min-height: 76px; font-family: 'Open Sans', sans-serif; }
+    .form-field input:disabled { background: var(--gray-100); color: var(--gray-400); }
+    .form-field .hint { color: var(--gray-400); font-size: 0.75rem; margin-top: 4px; display: block; line-height: 1.4; }
+    .form-field textarea:focus, .form-field input:focus, .form-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(235,187,67,0.3); }
     .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
     .toggle { position: relative; width: 44px; height: 24px; }
     .toggle input { opacity: 0; width: 0; height: 0; }
@@ -560,20 +595,27 @@
         <div class="user-avatar" id="sidebarAvatar">A</div>
         <div class="user-info">
           <div class="name" id="sidebarName">Usuário</div>
-          <div class="role">Administrador</div>
+          <div class="role" id="sidebarRole">—</div>
         </div>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">Geral</div>
-        <div class="nav-item active" onclick="showPage('dashboard')">
+        <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
           <i class="fas fa-chart-pie"></i> Dashboard
         </div>
-        <div class="nav-section">Gerenciar</div>
-        <div class="nav-item" onclick="showPage('ramais')">
+        <div class="nav-section" data-perm-any="ramais.gerenciar usuarios.gerenciar grupos.gerenciar">Gerenciar</div>
+        <div class="nav-item" data-page="ramais" data-perm="ramais.gerenciar" onclick="showPage('ramais')">
           <i class="fas fa-phone"></i> Ramais
         </div>
-        <div class="nav-item" onclick="showPage('usuarios')">
-          <i class="fas fa-users-cog"></i> Usuários Admin
+        <div class="nav-item" data-page="usuarios" data-perm="usuarios.gerenciar" onclick="showPage('usuarios')">
+          <i class="fas fa-users-cog"></i> Usuários
+        </div>
+        <div class="nav-item" data-page="grupos" data-perm="grupos.gerenciar" onclick="showPage('grupos')">
+          <i class="fas fa-user-shield"></i> Grupos de Permissão
+        </div>
+        <div class="nav-section" data-perm-any="config.gerenciar">Sistema</div>
+        <div class="nav-item" data-page="config" data-perm="config.gerenciar" onclick="showPage('config')">
+          <i class="fas fa-network-wired"></i> Integração LDAP
         </div>
       </nav>
       <div class="sidebar-footer">
@@ -596,13 +638,13 @@
         <div class="stats-grid" id="statsGrid">
           <div class="stat-block"><div class="stat-icon blue"><i class="fas fa-phone"></i></div><div class="stat-info"><div class="num" id="s-ramais">—</div><div class="lbl">Ramais Ativos</div></div></div>
           <div class="stat-block"><div class="stat-icon green"><i class="fas fa-sitemap"></i></div><div class="stat-info"><div class="num" id="s-setores">—</div><div class="lbl">Setores</div></div></div>
-          <div class="stat-block"><div class="stat-icon yellow"><i class="fas fa-users-cog"></i></div><div class="stat-info"><div class="num" id="s-users">—</div><div class="lbl">Usuários Admin</div></div></div>
+          <div class="stat-block"><div class="stat-icon yellow"><i class="fas fa-users-cog"></i></div><div class="stat-info"><div class="num" id="s-users">—</div><div class="lbl">Usuários</div></div></div>
           <div class="stat-block"><div class="stat-icon red"><i class="fas fa-phone-slash"></i></div><div class="stat-info"><div class="num" id="s-inativos">—</div><div class="lbl">Inativos</div></div></div>
         </div>
         <div class="section-card">
           <div class="section-header">
             <h4><i class="fas fa-clock"></i> Últimos Ramais Cadastrados</h4>
-            <button class="btn btn-primary btn-sm" onclick="showPage('ramais')"><i class="fas fa-phone"></i> Ver Todos</button>
+            <button class="btn btn-primary btn-sm" data-perm="ramais.gerenciar" onclick="showPage('ramais')"><i class="fas fa-phone"></i> Ver Todos</button>
           </div>
           <div style="overflow-x:auto">
             <table class="admin-table" id="recentTable">
@@ -636,7 +678,7 @@
       <div class="page" id="page-usuarios">
         <div class="section-card">
           <div class="section-header">
-            <h4><i class="fas fa-users-cog"></i> Usuários Administradores</h4>
+            <h4><i class="fas fa-users-cog"></i> Usuários do Sistema</h4>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="userSearch" placeholder="Buscar…" oninput="renderUsersTable()"/></div>
               <button class="btn btn-success" onclick="openUserModal()"><i class="fas fa-plus"></i> Novo Usuário</button>
@@ -644,10 +686,120 @@
           </div>
           <div style="overflow-x:auto">
             <table class="admin-table">
-              <thead><tr><th>Nome</th><th>Username</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Usuário</th><th>Origem</th><th>Grupos</th><th>Status</th><th>Último acesso</th><th>Ações</th></tr></thead>
               <tbody id="userBody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- GRUPOS -->
+      <div class="page" id="page-grupos">
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-user-shield"></i> Grupos de Permissão</h4>
+            <button class="btn btn-success" onclick="openGrupoModal()"><i class="fas fa-plus"></i> Novo Grupo</button>
+          </div>
+          <p class="muted-note" style="padding-top:14px">Cada usuário pode estar em um ou mais grupos e recebe a soma das permissões deles. Se o grupo tiver grupos do LDAP/AD mapeados, quem é membro deles no AD entra automaticamente no grupo a cada login.</p>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>Grupo</th><th>Permissões</th><th>Grupos do LDAP</th><th>Membros</th><th>Ações</th></tr></thead>
+              <tbody id="grupoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES LDAP -->
+      <div class="page" id="page-config">
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-network-wired"></i> Integração LDAP / Active Directory</h4>
+            <span class="ldap-status off" id="ldapStatus"><i class="fas fa-circle" style="font-size:.5rem"></i> Desativado</span>
+          </div>
+          <div class="config-grid">
+            <div class="form-field full">
+              <div class="toggle-wrap" style="margin-top:0">
+                <label class="toggle"><input type="checkbox" id="ldapEnabled"/><span class="toggle-slider"></span></label>
+                <span style="font-size:0.88rem;color:var(--gray-800);font-weight:600">Permitir login com usuário e senha da rede (LDAP)</span>
+              </div>
+              <span class="hint">Usuários locais (como o <code>admin</code>) continuam entrando com a senha do sistema.</span>
+            </div>
+            <div class="form-field full">
+              <label>Servidor *</label>
+              <input type="text" id="ldapUrl" placeholder="ldap://dc01.gacc.local:389 ou ldaps://dc01.gacc.local:636"/>
+            </div>
+            <div class="form-field">
+              <div class="toggle-wrap">
+                <label class="toggle"><input type="checkbox" id="ldapStarttls"/><span class="toggle-slider"></span></label>
+                <span style="font-size:0.84rem;color:var(--gray-600)">Usar STARTTLS (em ldap://)</span>
+              </div>
+            </div>
+            <div class="form-field">
+              <div class="toggle-wrap">
+                <label class="toggle"><input type="checkbox" id="ldapRejectUnauth" checked/><span class="toggle-slider"></span></label>
+                <span style="font-size:0.84rem;color:var(--gray-600)">Validar certificado TLS</span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Usuário de serviço (Bind DN)</label>
+              <input type="text" id="ldapBindDn" placeholder="CN=svc-ramais,OU=Servicos,DC=gacc,DC=local" autocomplete="off"/>
+              <span class="hint">No AD também aceita <code>svc-ramais@gacc.local</code>.</span>
+            </div>
+            <div class="form-field">
+              <label>Senha do usuário de serviço</label>
+              <input type="password" id="ldapBindPassword" placeholder="" autocomplete="new-password"/>
+              <span class="hint" id="ldapPassHint">Deixe em branco para manter a senha atual.</span>
+            </div>
+            <div class="form-field full">
+              <label>Base DN *</label>
+              <input type="text" id="ldapBaseDn" placeholder="DC=gacc,DC=local"/>
+            </div>
+            <div class="form-field full">
+              <label>Filtro de usuário *</label>
+              <input type="text" id="ldapUserFilter" placeholder="(sAMAccountName={{username}})"/>
+              <span class="hint"><code>{{username}}</code> é trocado pelo que a pessoa digita no login. Active Directory: <code>(sAMAccountName={{username}})</code> · OpenLDAP: <code>(uid={{username}})</code></span>
+            </div>
+            <div class="form-field">
+              <label>Atributo do nome</label>
+              <input type="text" id="ldapAttrName" placeholder="displayName"/>
+            </div>
+            <div class="form-field">
+              <label>Atributo do e-mail</label>
+              <input type="text" id="ldapAttrEmail" placeholder="mail"/>
+            </div>
+            <div class="form-field full">
+              <label>Grupo padrão</label>
+              <select id="ldapDefaultGroup"></select>
+              <span class="hint">Para quem entra pelo LDAP e não cai em nenhum grupo mapeado. Sem grupo padrão, essas pessoas não conseguem entrar.</span>
+            </div>
+          </div>
+          <div class="config-actions">
+            <button class="btn btn-ghost" onclick="testLdap(false)"><i class="fas fa-plug"></i> Testar conexão</button>
+            <button class="btn btn-primary" onclick="saveLdap()"><i class="fas fa-save"></i> Salvar configuração</button>
+          </div>
+          <div class="test-result" id="ldapConnResult"></div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-user-check"></i> Testar um usuário</h4>
+          </div>
+          <p class="muted-note" style="padding-top:14px">Usa os dados do formulário acima (mesmo antes de salvar) para procurar o usuário no LDAP e mostrar em quais grupos do sistema ele cairia. A senha é opcional: sem ela, só faz a busca.</p>
+          <div class="config-grid">
+            <div class="form-field">
+              <label>Usuário</label>
+              <input type="text" id="ldapTestUser" placeholder="ex: fabio.santos" autocomplete="off"/>
+            </div>
+            <div class="form-field">
+              <label>Senha (opcional)</label>
+              <input type="password" id="ldapTestPass" autocomplete="new-password"/>
+            </div>
+          </div>
+          <div class="config-actions" style="border-top:none;padding-top:0">
+            <button class="btn btn-primary" onclick="testLdap(true)"><i class="fas fa-search"></i> Testar usuário</button>
+          </div>
+          <div class="test-result" id="ldapUserResult"></div>
         </div>
       </div>
 
@@ -711,38 +863,93 @@
 
 <!-- MODAL USUÁRIO -->
 <div class="modal-overlay" id="userModal">
-  <div class="modal">
+  <div class="modal wide">
     <div class="modal-header">
       <h4 id="userModalTitle"><i class="fas fa-user-plus"></i> Novo Usuário</h4>
       <button class="modal-close" onclick="closeModal('userModal')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="userId"/>
+      <div class="form-field" id="origemField">
+        <label>Tipo de acesso</label>
+        <div class="origem-switch">
+          <label class="check-item"><input type="radio" name="userOrigem" value="local" checked onchange="updateUserModalOrigem()"/><div><div class="t">Usuário local</div><div class="d">Entra com uma senha definida aqui</div></div></label>
+          <label class="check-item"><input type="radio" name="userOrigem" value="ldap" onchange="updateUserModalOrigem()"/><div><div class="t">Usuário da rede (LDAP)</div><div class="d">Entra com o login e a senha do AD</div></div></label>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-field" style="grid-column:1/-1">
           <label>Nome Completo *</label>
           <input type="text" id="userName" placeholder="Ex: João Silva"/>
         </div>
         <div class="form-field">
-          <label>Username *</label>
+          <label>Usuário *</label>
           <input type="text" id="userUsername" placeholder="Ex: joao.silva"/>
+          <span class="hint" id="usernameHint"></span>
         </div>
         <div class="form-field">
-          <label>Perfil</label>
-          <select id="userRole">
-            <option value="admin">Administrador</option>
-          </select>
+          <label>E-mail</label>
+          <input type="email" id="userEmail" placeholder="nome@gaccbahia.org.br"/>
         </div>
-        <div class="form-field" style="grid-column:1/-1">
+        <div class="form-field" style="grid-column:1/-1" id="passField">
           <label id="passLabel">Senha *</label>
-          <input type="password" id="userPass" placeholder="Mínimo 6 caracteres"/>
-          <small style="color:var(--gray-400);font-size:0.75rem;margin-top:4px;display:block;" id="passHint"></small>
+          <input type="password" id="userPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+          <span class="hint" id="passHint"></span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Grupos de permissão</label>
+        <div class="check-list" id="userGruposList"></div>
+        <span class="hint" id="userGruposHint"></span>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="userAtivo" checked/><span class="toggle-slider"></span></label>
+          <span style="font-size:0.85rem;color:var(--gray-600)">Usuário ativo (pode entrar no sistema)</span>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('userModal')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GRUPO -->
+<div class="modal-overlay" id="grupoModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h4 id="grupoModalTitle"><i class="fas fa-user-shield"></i> Novo Grupo</h4>
+      <button class="modal-close" onclick="closeModal('grupoModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="grupoId"/>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Nome do grupo *</label>
+          <input type="text" id="grupoNome" placeholder="Ex: Recepção"/>
+        </div>
+        <div class="form-field">
+          <label>Descrição</label>
+          <input type="text" id="grupoDescricao" placeholder="Ex: Mantém a lista de ramais"/>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Permissões</label>
+        <div class="check-list" id="grupoPermList"></div>
+        <span class="hint" id="grupoPermHint"></span>
+      </div>
+      <div class="form-field">
+        <label>Grupos do LDAP / AD vinculados</label>
+        <textarea id="grupoLdap" placeholder="Um por linha. Ex:&#10;CN=TI,OU=Grupos,DC=gacc,DC=local&#10;Recepcao"></textarea>
+        <span class="hint">Use o DN completo do grupo ou só o nome dele (CN). Membros desses grupos no AD entram neste grupo automaticamente no login e saem dele se forem removidos no AD.</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('grupoModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGrupo()"><i class="fas fa-save"></i> Salvar</button>
     </div>
   </div>
 </div>
@@ -766,7 +973,22 @@
 const API = '/api';
 let token = localStorage.getItem('ramal_token');
 let currentUser = JSON.parse(localStorage.getItem('ramal_user') || 'null');
-let allRamais = [], allUsers = [];
+let allRamais = [], allUsers = [], allGrupos = [], allPerms = [];
+let ldapCfg = null;
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Busca sem diferenciar maiúsculas nem acentos: "joao" encontra "João".
+const norm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const can = p => (currentUser?.permissoes || []).includes(p);
+
+// fetch autenticado: sessão expirada ou usuário desativado volta para o login.
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, { ...opts, headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { logout(); throw new Error(data.error || 'Sessão expirada'); }
+  if (!res.ok) throw new Error(data.error || 'Erro na requisição');
+  return data;
+}
 let confirmCb = null;
 
 // ─── AUTH ───
@@ -785,6 +1007,8 @@ async function doLogin() {
     currentUser = data.user;
     localStorage.setItem('ramal_token', token);
     localStorage.setItem('ramal_user', JSON.stringify(currentUser));
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginPass').value = '';
     initApp();
   } catch (e) {
     const el = document.getElementById('loginError');
@@ -805,15 +1029,37 @@ function authHeaders() {
 }
 
 // ─── INIT ───
-function initApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appShell').style.display = 'block';
+async function refreshMe() {
+  // Atualiza nome, grupos e permissões a partir do servidor.
+  currentUser = await api('/admin/me');
+  localStorage.setItem('ramal_user', JSON.stringify(currentUser));
   const initials = currentUser.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
   document.getElementById('sidebarAvatar').textContent = initials;
   document.getElementById('sidebarName').textContent = currentUser.name;
+  document.getElementById('sidebarRole').textContent = currentUser.grupos.map(g => g.nome).join(', ') || 'Sem grupo';
+  applyPermissions();
+}
+
+async function initApp() {
+  try { await refreshMe(); } catch (_) { return; }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  showPage('dashboard');
   loadStats();
   loadRamais();
-  loadUsers();
+  if (can('usuarios.gerenciar') || can('grupos.gerenciar')) loadGrupos();
+  if (can('usuarios.gerenciar')) loadUsers();
+  if (can('config.gerenciar')) loadLdapConfig();
+}
+
+// Esconde menus e botões das áreas que o usuário não pode acessar.
+function applyPermissions() {
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    el.style.display = can(el.dataset.perm) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-perm-any]').forEach(el => {
+    el.style.display = el.dataset.permAny.split(' ').some(can) ? '' : 'none';
+  });
 }
 
 // Check if already logged in
@@ -822,17 +1068,16 @@ if (token && currentUser) initApp();
 // ─── NAVIGATION ───
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
   document.getElementById(`page-${page}`).classList.add('active');
-  event?.currentTarget?.classList.add('active');
-  const titles = { dashboard: 'Dashboard', ramais: 'Gerenciar Ramais', usuarios: 'Usuários Administradores' };
+  const titles = { dashboard: 'Dashboard', ramais: 'Gerenciar Ramais', usuarios: 'Usuários do Sistema', grupos: 'Grupos de Permissão', config: 'Integração LDAP' };
   document.getElementById('pageTitle').textContent = titles[page];
 }
 
 // ─── STATS ───
 async function loadStats() {
-  const res = await fetch(`${API}/admin/stats`, { headers: authHeaders() });
-  const data = await res.json();
+  let data;
+  try { data = await api('/admin/stats'); } catch (_) { return; }
   document.getElementById('s-ramais').textContent = data.totalRamais;
   document.getElementById('s-setores').textContent = data.totalSetores;
   document.getElementById('s-users').textContent = data.totalUsers;
@@ -841,8 +1086,8 @@ async function loadStats() {
 
 // ─── RAMAIS ───
 async function loadRamais() {
-  const res = await fetch(`${API}/admin/ramais`, { headers: authHeaders() });
-  allRamais = await res.json();
+  if (!can('ramais.gerenciar')) { document.getElementById('recentBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--gray-400);padding:24px">Seu grupo não gerencia ramais.</td></tr>'; return; }
+  try { allRamais = await api('/admin/ramais'); } catch (e) { return showToast(e.message, 'error'); }
   renderRamaisTable();
   renderRecentTable();
   populateSetorList();
@@ -855,9 +1100,9 @@ function populateSetorList() {
 }
 
 function renderRamaisTable() {
-  const q = document.getElementById('ramalSearch')?.value.toLowerCase() || '';
+  const q = norm(document.getElementById('ramalSearch')?.value.trim());
   const filtered = allRamais.filter(r =>
-    [r.nome, r.cargo, r.setor, r.ramal, r.email].some(v => v.toLowerCase().includes(q))
+    [r.nome, r.cargo, r.setor, r.ramal, r.email].some(v => norm(v).includes(q))
   );
   const body = document.getElementById('ramalBody');
   body.innerHTML = filtered.map(r => `
@@ -940,28 +1185,59 @@ function deleteRamal(id, nome) {
 
 // ─── USERS ───
 async function loadUsers() {
-  const res = await fetch(`${API}/admin/users`, { headers: authHeaders() });
-  allUsers = await res.json();
+  try { allUsers = await api('/admin/users'); } catch (e) { return showToast(e.message, 'error'); }
   renderUsersTable();
 }
 
+function fmtDate(d) {
+  if (!d) return '<span style="color:var(--gray-400)">Nunca</span>';
+  return new Date(d.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
 function renderUsersTable() {
-  const q = document.getElementById('userSearch')?.value.toLowerCase() || '';
+  const q = norm(document.getElementById('userSearch')?.value.trim());
   const filtered = allUsers.filter(u =>
-    [u.name, u.username, u.role].some(v => v.toLowerCase().includes(q))
+    [u.name, u.username, u.email, ...u.grupos.map(g => g.nome)].some(v => norm(v).includes(q))
   );
   document.getElementById('userBody').innerHTML = filtered.map(u => `
     <tr>
-      <td><div class="tbl-name">${u.name}</div></td>
-      <td><code style="background:var(--gray-100);padding:2px 8px;border-radius:4px;font-size:0.82rem">${u.username}</code></td>
-      <td><span class="badge-ativo sim">${u.role}</span></td>
-      <td style="color:var(--gray-400);font-size:0.82rem">${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+      <td><div class="tbl-name">${esc(u.name)}</div>${u.email ? `<div class="tbl-sub">${esc(u.email)}</div>` : ''}</td>
+      <td><code style="background:var(--gray-100);padding:2px 8px;border-radius:4px;font-size:0.82rem">${esc(u.username)}</code></td>
+      <td>${u.origem === 'ldap' ? '<span class="chip yellow"><i class="fas fa-network-wired"></i> LDAP</span>' : '<span class="chip gray"><i class="fas fa-key"></i> Local</span>'}</td>
+      <td><div class="chips">${u.grupos.map(g => `<span class="chip">${esc(g.nome)}</span>`).join('') || '<span style="color:var(--red);font-size:.78rem">Sem grupo</span>'}</div></td>
+      <td><span class="badge-ativo ${u.ativo ? 'sim' : 'nao'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      <td style="color:var(--gray-600);font-size:0.8rem">${fmtDate(u.ultimo_login)}</td>
       <td><div class="actions">
-        <button class="btn btn-ghost btn-sm" onclick="openUserModal(${u.id})"><i class="fas fa-pencil"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" title="Editar" onclick="openUserModal(${u.id})"><i class="fas fa-pencil"></i></button>
+        <button class="btn btn-danger btn-sm" title="Excluir" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
       </div></td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum usuário encontrado</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum usuário encontrado</td></tr>';
+}
+
+function userOrigem() {
+  return document.querySelector('input[name="userOrigem"]:checked').value;
+}
+
+function updateUserModalOrigem() {
+  const editing = !!document.getElementById('userId').value;
+  const ldapUser = userOrigem() === 'ldap';
+  document.getElementById('passField').style.display = ldapUser ? 'none' : '';
+  document.getElementById('passLabel').textContent = editing ? 'Nova senha (deixe em branco para manter)' : 'Senha *';
+  document.getElementById('passHint').textContent = editing ? 'Preencha apenas se quiser alterar a senha' : '';
+  document.getElementById('usernameHint').textContent = ldapUser ? 'O mesmo login usado na rede (ex: sAMAccountName no AD).' : '';
+  document.getElementById('userGruposHint').textContent = ldapUser
+    ? 'Grupos mapeados ao LDAP são atualizados automaticamente a cada login; os demais ficam como você marcar aqui.'
+    : '';
+}
+
+function renderUserGrupos(selected) {
+  document.getElementById('userGruposList').innerHTML = allGrupos.map(g => `
+    <label class="check-item">
+      <input type="checkbox" value="${g.id}" ${selected.includes(g.id) ? 'checked' : ''}/>
+      <div><div class="t">${esc(g.nome)}${g.ldap_grupos.length ? ' <span class="chip yellow" style="margin-left:4px">LDAP</span>' : ''}</div>
+      <div class="d">${esc(g.descricao || permLabels(g.permissoes) || 'Sem permissões')}</div></div>
+    </label>`).join('') || '<span class="hint">Nenhum grupo cadastrado.</span>';
 }
 
 function openUserModal(id) {
@@ -970,47 +1246,213 @@ function openUserModal(id) {
   document.getElementById('userModalTitle').innerHTML = id
     ? '<i class="fas fa-user-edit"></i> Editar Usuário'
     : '<i class="fas fa-user-plus"></i> Novo Usuário';
+  document.getElementById('origemField').style.display = id ? 'none' : '';
+  document.querySelector(`input[name="userOrigem"][value="${u?.origem || 'local'}"]`).checked = true;
   document.getElementById('userName').value = u?.name || '';
   document.getElementById('userUsername').value = u?.username || '';
-  document.getElementById('userRole').value = u?.role || 'admin';
   document.getElementById('userUsername').disabled = !!id;
+  document.getElementById('userEmail').value = u?.email || '';
   document.getElementById('userPass').value = '';
-  document.getElementById('passLabel').textContent = id ? 'Nova Senha (deixe em branco para manter)' : 'Senha *';
-  document.getElementById('passHint').textContent = id ? 'Preencha apenas se quiser alterar a senha' : '';
+  document.getElementById('userAtivo').checked = u ? !!u.ativo : true;
+  renderUserGrupos(u ? u.grupos.map(g => g.id) : []);
+  updateUserModalOrigem();
   openModal('userModal');
 }
 
 async function saveUser() {
   const id = document.getElementById('userId').value;
+  const origem = userOrigem();
   const payload = {
     name: document.getElementById('userName').value.trim(),
     username: document.getElementById('userUsername').value.trim(),
-    role: document.getElementById('userRole').value,
-    password: document.getElementById('userPass').value
+    email: document.getElementById('userEmail').value.trim(),
+    origem,
+    ativo: document.getElementById('userAtivo').checked ? 1 : 0,
+    grupos: [...document.querySelectorAll('#userGruposList input:checked')].map(i => Number(i.value)),
   };
-  if (!id && !payload.password) return showToast('Informe uma senha', 'error');
-  if (!id && !payload.username) return showToast('Informe o username', 'error');
+  const pass = document.getElementById('userPass').value;
+  if (origem === 'local' && pass) payload.password = pass;
   if (!payload.name) return showToast('Informe o nome', 'error');
-  const url = id ? `${API}/admin/users/${id}` : `${API}/admin/users`;
-  const method = id ? 'PUT' : 'POST';
-  const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (!res.ok) return showToast(data.error, 'error');
-  showToast(data.message, 'success');
-  closeModal('userModal');
-  loadUsers();
-  loadStats();
+  if (!id && !payload.username) return showToast('Informe o usuário', 'error');
+  if (!id && origem === 'local' && !pass) return showToast('Informe uma senha', 'error');
+  if (!payload.grupos.length && !confirm('Este usuário não está em nenhum grupo e não vai conseguir entrar. Salvar assim mesmo?')) return;
+  try {
+    const data = await api(id ? `/admin/users/${id}` : '/admin/users', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    showToast(data.message, 'success');
+    closeModal('userModal');
+    await loadUsers();
+    loadStats();
+    loadGrupos();
+    if (id == currentUser.id) refreshMe().catch(() => {});
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
-function deleteUser(id, nome) {
-  openConfirm(`Excluir o usuário <strong>${nome}</strong>?`, async () => {
-    const res = await fetch(`${API}/admin/users/${id}`, { method: 'DELETE', headers: authHeaders() });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error, 'error');
-    showToast(data.message, 'success');
-    loadUsers();
-    loadStats();
+function deleteUser(id) {
+  const u = allUsers.find(x => x.id === id);
+  openConfirm(`Excluir o usuário <strong>${esc(u.name)}</strong>?`, async () => {
+    try {
+      const data = await api(`/admin/users/${id}`, { method: 'DELETE' });
+      showToast(data.message, 'success');
+      loadUsers(); loadStats(); loadGrupos();
+    } catch (e) { showToast(e.message, 'error'); }
   });
+}
+
+// ─── GRUPOS DE PERMISSÃO ───
+async function loadGrupos() {
+  try {
+    [allGrupos, allPerms] = await Promise.all([api('/admin/grupos'), allPerms.length ? allPerms : api('/admin/permissions')]);
+  } catch (e) { return showToast(e.message, 'error'); }
+  renderGruposTable();
+  renderDefaultGroupSelect();
+}
+
+function permLabels(keys) {
+  return keys.map(k => allPerms.find(p => p.key === k)?.label || k).join(', ');
+}
+
+function renderGruposTable() {
+  document.getElementById('grupoBody').innerHTML = allGrupos.map(g => `
+    <tr>
+      <td><div class="tbl-name">${esc(g.nome)} ${g.sistema ? '<span class="chip green" style="margin-left:4px">Sistema</span>' : ''}</div>${g.descricao ? `<div class="tbl-sub">${esc(g.descricao)}</div>` : ''}</td>
+      <td><div class="chips">${g.permissoes.map(k => `<span class="chip">${esc(allPerms.find(p => p.key === k)?.label || k)}</span>`).join('') || '<span style="color:var(--gray-400)">—</span>'}</div></td>
+      <td><div class="chips">${g.ldap_grupos.map(v => `<span class="chip yellow" title="${esc(v)}">${esc(v.length > 34 ? v.slice(0, 32) + '…' : v)}</span>`).join('') || '<span style="color:var(--gray-400)">—</span>'}</div></td>
+      <td style="text-align:center"><span class="ramal-pill">${g.membros}</span></td>
+      <td><div class="actions">
+        <button class="btn btn-ghost btn-sm" title="Editar" onclick="openGrupoModal(${g.id})"><i class="fas fa-pencil"></i></button>
+        ${g.sistema ? '' : `<button class="btn btn-danger btn-sm" title="Excluir" onclick="deleteGrupo(${g.id})"><i class="fas fa-trash"></i></button>`}
+      </div></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">Nenhum grupo</td></tr>';
+}
+
+function openGrupoModal(id) {
+  const g = id ? allGrupos.find(x => x.id === id) : null;
+  document.getElementById('grupoId').value = id || '';
+  document.getElementById('grupoModalTitle').innerHTML = id
+    ? '<i class="fas fa-pencil"></i> Editar Grupo'
+    : '<i class="fas fa-user-shield"></i> Novo Grupo';
+  document.getElementById('grupoNome').value = g?.nome || '';
+  document.getElementById('grupoDescricao').value = g?.descricao || '';
+  document.getElementById('grupoLdap').value = (g?.ldap_grupos || []).join('\n');
+  const locked = !!g?.sistema;
+  document.getElementById('grupoPermList').innerHTML = allPerms.map(p => `
+    <label class="check-item ${locked ? 'disabled' : ''}">
+      <input type="checkbox" value="${p.key}" ${(locked || g?.permissoes.includes(p.key)) ? 'checked' : ''} ${locked ? 'disabled' : ''}/>
+      <div><div class="t">${esc(p.label)}</div><div class="d">${esc(p.desc)}</div></div>
+    </label>`).join('');
+  document.getElementById('grupoPermHint').textContent = locked ? 'O grupo Administradores sempre tem todas as permissões.' : '';
+  openModal('grupoModal');
+}
+
+async function saveGrupo() {
+  const id = document.getElementById('grupoId').value;
+  const payload = {
+    nome: document.getElementById('grupoNome').value.trim(),
+    descricao: document.getElementById('grupoDescricao').value.trim(),
+    permissoes: [...document.querySelectorAll('#grupoPermList input:checked')].map(i => i.value),
+    ldap_grupos: document.getElementById('grupoLdap').value,
+  };
+  if (!payload.nome) return showToast('Informe o nome do grupo', 'error');
+  try {
+    const data = await api(id ? `/admin/grupos/${id}` : '/admin/grupos', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    showToast(data.message, 'success');
+    closeModal('grupoModal');
+    await loadGrupos();
+    if (can('usuarios.gerenciar')) loadUsers();
+    refreshMe().catch(() => {});
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function deleteGrupo(id) {
+  const g = allGrupos.find(x => x.id === id);
+  openConfirm(`Excluir o grupo <strong>${esc(g.nome)}</strong>? ${g.membros} usuário(s) perderão as permissões dele.`, async () => {
+    try {
+      const data = await api(`/admin/grupos/${id}`, { method: 'DELETE' });
+      showToast(data.message, 'success');
+      await loadGrupos();
+      if (can('usuarios.gerenciar')) loadUsers();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+}
+
+// ─── CONFIGURAÇÃO LDAP ───
+async function loadLdapConfig() {
+  try { ldapCfg = await api('/admin/config/ldap'); } catch (e) { return showToast(e.message, 'error'); }
+  const c = ldapCfg;
+  document.getElementById('ldapEnabled').checked = !!c.enabled;
+  document.getElementById('ldapUrl').value = c.url || '';
+  document.getElementById('ldapStarttls').checked = !!c.starttls;
+  document.getElementById('ldapRejectUnauth').checked = c.tls_reject_unauthorized !== false;
+  document.getElementById('ldapBindDn').value = c.bind_dn || '';
+  document.getElementById('ldapBindPassword').value = '';
+  document.getElementById('ldapBindPassword').placeholder = c.bind_password_set ? '•••••••• (já configurada)' : 'Senha da conta de serviço';
+  document.getElementById('ldapPassHint').textContent = c.bind_password_set ? 'Deixe em branco para manter a senha atual.' : '';
+  document.getElementById('ldapBaseDn').value = c.base_dn || '';
+  document.getElementById('ldapUserFilter').value = c.user_filter || '';
+  document.getElementById('ldapAttrName').value = c.attr_name || '';
+  document.getElementById('ldapAttrEmail').value = c.attr_email || '';
+  renderDefaultGroupSelect();
+  const st = document.getElementById('ldapStatus');
+  st.className = 'ldap-status ' + (c.enabled ? 'on' : 'off');
+  st.innerHTML = `<i class="fas fa-circle" style="font-size:.5rem"></i> ${c.enabled ? 'Ativado' : 'Desativado'}`;
+}
+
+function renderDefaultGroupSelect() {
+  const sel = document.getElementById('ldapDefaultGroup');
+  if (!sel) return;
+  const current = ldapCfg?.default_group_id ?? '';
+  sel.innerHTML = '<option value="">Nenhum (bloquear quem não tiver grupo)</option>' +
+    allGrupos.map(g => `<option value="${g.id}">${esc(g.nome)}</option>`).join('');
+  sel.value = current;
+}
+
+function ldapFormPayload() {
+  return {
+    enabled: document.getElementById('ldapEnabled').checked,
+    url: document.getElementById('ldapUrl').value.trim(),
+    starttls: document.getElementById('ldapStarttls').checked,
+    tls_reject_unauthorized: document.getElementById('ldapRejectUnauth').checked,
+    bind_dn: document.getElementById('ldapBindDn').value.trim(),
+    bind_password: document.getElementById('ldapBindPassword').value,
+    base_dn: document.getElementById('ldapBaseDn').value.trim(),
+    user_filter: document.getElementById('ldapUserFilter').value.trim(),
+    attr_name: document.getElementById('ldapAttrName').value.trim(),
+    attr_email: document.getElementById('ldapAttrEmail').value.trim(),
+    default_group_id: document.getElementById('ldapDefaultGroup').value || null,
+  };
+}
+
+async function saveLdap() {
+  try {
+    const data = await api('/admin/config/ldap', { method: 'PUT', body: JSON.stringify(ldapFormPayload()) });
+    showToast(data.message, 'success');
+    loadLdapConfig();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function testLdap(withUser) {
+  const box = document.getElementById(withUser ? 'ldapUserResult' : 'ldapConnResult');
+  const payload = ldapFormPayload();
+  if (withUser) {
+    payload.test_username = document.getElementById('ldapTestUser').value.trim();
+    payload.test_password = document.getElementById('ldapTestPass').value;
+    if (!payload.test_username) return showToast('Informe o usuário para testar', 'error');
+  }
+  box.className = 'test-result ok';
+  box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testando…';
+  try {
+    const r = await api('/admin/config/ldap/test', { method: 'POST', body: JSON.stringify(payload) });
+    let html = `<strong><i class="fas fa-check-circle"></i> ${esc(r.message)}</strong>`;
+    if (r.usuario) {
+      html += `<br>DN: <code>${esc(r.usuario.dn)}</code><br>Nome: ${esc(r.usuario.nome)}${r.usuario.email ? ` · E-mail: ${esc(r.usuario.email)}` : ''}`;
+      html += `<br>Grupos no LDAP: ${r.usuario.memberOf.map(g => `<code>${esc(g)}</code>`).join(' ') || 'nenhum'}`;
+      html += `<br>Entraria nos grupos do sistema: <strong>${r.grupos_do_sistema.map(esc).join(', ') || 'nenhum (usa o grupo padrão, se houver)'}</strong>`;
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.className = 'test-result err';
+    box.innerHTML = `<strong><i class="fas fa-times-circle"></i> ${esc(e.message)}</strong>`;
+  }
 }
 
 // ─── UTILS ───

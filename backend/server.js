@@ -5,14 +5,16 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const ldap = require('./ldap');
 
 const app = express();
 const PORT = 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'gacc-ba-ramal-secret-2024';
-const DB_PATH = '/data/ramal.db';
+const DB_PATH = process.env.DB_PATH || '/data/ramal.db';
 
 // Ensure data directory exists
-if (!fs.existsSync('/data')) fs.mkdirSync('/data', { recursive: true });
+const DATA_DIR = path.dirname(DB_PATH);
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new Database(DB_PATH);
 
@@ -50,6 +52,88 @@ if (!existingAdmin) {
   db.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)').run('admin', hash, 'Administrador', 'admin');
 }
 
+// ─── GRUPOS DE PERMISSÃO ───
+// Catálogo fixo de permissões. Cada grupo recebe um subconjunto delas e cada
+// usuário pode estar em vários grupos; as permissões efetivas são a união.
+const PERMISSIONS = [
+  { key: 'ramais.gerenciar',   label: 'Gerenciar ramais',              desc: 'Criar, editar, ordenar e excluir ramais' },
+  { key: 'usuarios.gerenciar', label: 'Gerenciar usuários',            desc: 'Criar, editar e excluir usuários e vinculá-los a grupos' },
+  { key: 'grupos.gerenciar',   label: 'Gerenciar grupos de permissão', desc: 'Criar e editar grupos e o mapeamento com grupos do LDAP' },
+  { key: 'config.gerenciar',   label: 'Configurações do sistema',      desc: 'Configurar a integração LDAP / Active Directory' },
+];
+const PERMISSION_KEYS = PERMISSIONS.map(p => p.key);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS grupos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT UNIQUE NOT NULL,
+    descricao TEXT DEFAULT '',
+    permissoes TEXT NOT NULL DEFAULT '[]',
+    ldap_grupos TEXT DEFAULT '',
+    sistema INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS user_grupos (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    grupo_id INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, grupo_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS config (
+    chave TEXT PRIMARY KEY,
+    valor TEXT
+  );
+`);
+db.pragma('foreign_keys = ON');
+try { db.exec("ALTER TABLE users ADD COLUMN origem TEXT DEFAULT 'local'"); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN ativo INTEGER DEFAULT 1'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN ultimo_login DATETIME'); } catch (_) {}
+
+// Grupo "Administradores": tem sempre todas as permissões e não pode ser excluído.
+let adminGroup = db.prepare('SELECT id FROM grupos WHERE sistema = 1').get();
+if (!adminGroup) {
+  const r = db.prepare('INSERT INTO grupos (nome, descricao, permissoes, sistema) VALUES (?, ?, ?, 1)')
+    .run('Administradores', 'Acesso total ao sistema', JSON.stringify(PERMISSION_KEYS));
+  adminGroup = { id: r.lastInsertRowid };
+  db.prepare('INSERT INTO grupos (nome, descricao, permissoes) VALUES (?, ?, ?)')
+    .run('Editores de Ramais', 'Podem manter a lista de ramais', JSON.stringify(['ramais.gerenciar']));
+  // Bancos antigos: todo usuário que já existia era administrador.
+  db.prepare('INSERT OR IGNORE INTO user_grupos (user_id, grupo_id) SELECT id, ? FROM users').run(adminGroup.id);
+}
+db.prepare('UPDATE grupos SET permissoes = ? WHERE sistema = 1').run(JSON.stringify(PERMISSION_KEYS));
+
+// ─── CONFIGURAÇÕES (salvas no banco, editadas pelo admin) ───
+const LDAP_DEFAULTS = {
+  enabled: false,
+  url: '',
+  starttls: false,
+  tls_reject_unauthorized: true,
+  bind_dn: '',
+  bind_password: '',
+  base_dn: '',
+  user_filter: '(sAMAccountName={{username}})',
+  attr_name: 'displayName',
+  attr_email: 'mail',
+  default_group_id: null,
+};
+function getLdapConfig() {
+  const row = db.prepare("SELECT valor FROM config WHERE chave = 'ldap'").get();
+  let saved = {};
+  try { saved = row ? JSON.parse(row.valor) : {}; } catch (_) {}
+  return { ...LDAP_DEFAULTS, ...saved };
+}
+function saveLdapConfig(cfg) {
+  db.prepare("INSERT INTO config (chave, valor) VALUES ('ldap', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor")
+    .run(JSON.stringify(cfg));
+}
+// Nunca devolve a senha da conta de serviço para o navegador.
+function publicLdapConfig(cfg) {
+  const { bind_password, ...rest } = cfg;
+  return { ...rest, bind_password_set: !!bind_password };
+}
+
 // Seed sample data
 const count = db.prepare('SELECT COUNT(*) as c FROM ramais').get();
 if (count.c === 0) {
@@ -70,40 +154,147 @@ if (count.c === 0) {
 app.use(cors());
 app.use(express.json());
 
-// Auth middleware
+// ─── PERMISSÕES ───
+function parsePerms(json) {
+  try { return JSON.parse(json || '[]').filter(p => PERMISSION_KEYS.includes(p)); } catch (_) { return []; }
+}
+function userGroups(userId) {
+  return db.prepare(`SELECT g.id, g.nome, g.permissoes FROM grupos g
+    JOIN user_grupos ug ON ug.grupo_id = g.id WHERE ug.user_id = ? ORDER BY g.nome`).all(userId);
+}
+function userPermissions(userId) {
+  const set = new Set();
+  userGroups(userId).forEach(g => parsePerms(g.permissoes).forEach(p => set.add(p)));
+  return [...set];
+}
+function publicUser(u) {
+  return {
+    id: u.id, username: u.username, name: u.name, email: u.email || '',
+    origem: u.origem || 'local', ativo: u.ativo ?? 1,
+    grupos: userGroups(u.id).map(g => ({ id: g.id, nome: g.nome })),
+    permissoes: userPermissions(u.id),
+  };
+}
+
+// Garante que sempre sobra pelo menos um usuário ativo capaz de gerenciar
+// grupos e usuários; senão ninguém mais conseguiria administrar o sistema.
+function assertAdminRemains() {
+  const users = db.prepare('SELECT id FROM users WHERE ativo = 1').all();
+  const ok = users.some(u => {
+    const p = userPermissions(u.id);
+    return p.includes('usuarios.gerenciar') && p.includes('grupos.gerenciar');
+  });
+  if (!ok) {
+    const e = new Error('A alteração deixaria o sistema sem nenhum administrador ativo');
+    e.status = 400;
+    throw e;
+  }
+}
+// Executa uma alteração e desfaz tudo se ela deixar o sistema sem administrador.
+function guarded(fn) {
+  return db.transaction(() => { const r = fn(); assertAdminRemains(); return r; })();
+}
+
+// Auth middleware: o token só identifica o usuário. Permissões e status são
+// lidos do banco a cada requisição, então mudanças valem na hora.
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token requerido' });
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: 'Token inválido' });
+  let payload;
+  try { payload = jwt.verify(token, JWT_SECRET); } catch {
+    return res.status(401).json({ error: 'Token inválido' });
   }
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+  if (!user || !user.ativo) return res.status(401).json({ error: 'Usuário inativo ou removido' });
+  req.user = user;
+  req.perms = userPermissions(user.id);
+  next();
 };
+const can = perm => (req, res, next) =>
+  req.perms.includes(perm) ? next() : res.status(403).json({ error: 'Você não tem permissão para esta ação' });
 
-// LOGIN
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-  if (!user || !bcrypt.compareSync(password, user.password))
-    return res.status(401).json({ error: 'Credenciais inválidas' });
-  const token = jwt.sign({ id: user.id, username: user.username, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role } });
+// Vincula o usuário do LDAP aos grupos mapeados. Vínculos feitos à mão em
+// grupos sem mapeamento LDAP são mantidos.
+function syncLdapGroups(userId, memberOf, cfg) {
+  const grupos = db.prepare('SELECT id, ldap_grupos FROM grupos').all();
+  const mapped = grupos.filter(g => (g.ldap_grupos || '').trim());
+  const del = db.prepare('DELETE FROM user_grupos WHERE user_id = ? AND grupo_id = ?');
+  const ins = db.prepare('INSERT OR IGNORE INTO user_grupos (user_id, grupo_id) VALUES (?, ?)');
+  mapped.forEach(g => {
+    const values = g.ldap_grupos.split(/\r?\n|;/);
+    if (ldap.matchesGroup(memberOf, values)) ins.run(userId, g.id); else del.run(userId, g.id);
+  });
+  const hasAny = db.prepare('SELECT 1 FROM user_grupos WHERE user_id = ?').get(userId);
+  if (!hasAny && cfg.default_group_id) {
+    const exists = db.prepare('SELECT id FROM grupos WHERE id = ?').get(cfg.default_group_id);
+    if (exists) ins.run(userId, cfg.default_group_id);
+  }
+}
+
+function issueToken(user) {
+  db.prepare('UPDATE users SET ultimo_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '8h' });
+  return { token, user: publicUser(user) };
+}
+
+// LOGIN: usuários locais usam a senha do sistema; os demais são validados no LDAP.
+app.post('/api/login', async (req, res) => {
+  const username = String(req.body?.username || '').trim();
+  const password = String(req.body?.password || '');
+  if (!username || !password) return res.status(400).json({ error: 'Informe usuário e senha' });
+
+  let user = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(username);
+
+  if (user && (user.origem || 'local') === 'local') {
+    if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Credenciais inválidas' });
+  } else {
+    const cfg = getLdapConfig();
+    if (!cfg.enabled || !cfg.url || !cfg.base_dn) return res.status(401).json({ error: 'Credenciais inválidas' });
+    let info;
+    try {
+      info = await ldap.authenticate(cfg, username, password);
+    } catch (e) {
+      console.error('Erro no LDAP:', e.message);
+      return res.status(502).json({ error: 'Não foi possível falar com o servidor LDAP. Tente novamente ou fale com a TI.' });
+    }
+    if (!info) return res.status(401).json({ error: 'Credenciais inválidas' });
+    db.transaction(() => {
+      if (!user) {
+        const r = db.prepare("INSERT INTO users (username, password, name, email, origem, role) VALUES (?, '!', ?, ?, 'ldap', '')")
+          .run(username.toLowerCase(), info.name, info.email);
+        user = db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
+      } else {
+        db.prepare('UPDATE users SET name = ?, email = ? WHERE id = ?').run(info.name, info.email, user.id);
+      }
+      syncLdapGroups(user.id, info.memberOf, cfg);
+    })();
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  }
+
+  if (!user.ativo) return res.status(403).json({ error: 'Usuário desativado. Fale com a TI.' });
+  if (!userPermissions(user.id).length)
+    return res.status(403).json({ error: 'Seu usuário não está em nenhum grupo de permissão. Fale com a TI.' });
+  res.json(issueToken(user));
 });
+
+app.get('/api/admin/me', auth, (req, res) => res.json(publicUser(req.user)));
+app.get('/api/admin/permissions', auth, (req, res) => res.json(PERMISSIONS));
 
 // PUBLIC: List ramais
 app.get('/api/ramais', (req, res) => {
   const { search, setor } = req.query;
   let query = 'SELECT * FROM ramais WHERE ativo = 1';
   const params = [];
-  if (search) {
-    query += ' AND (nome LIKE ? OR cargo LIKE ? OR ramal LIKE ? OR email LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-  }
   if (setor) { query += ' AND setor = ?'; params.push(setor); }
   query += ' ORDER BY CASE WHEN posicao = 0 OR posicao IS NULL THEN 1 ELSE 0 END, posicao ASC, setor, nome';
-  res.json(db.prepare(query).all(...params));
+  let rows = db.prepare(query).all(...params);
+  // Filtra em JS para ignorar acentos e maiúsculas ("joao" encontra "João").
+  if (search) {
+    const norm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const q = norm(search.trim());
+    rows = rows.filter(r => [r.nome, r.cargo, r.ramal, r.email, r.setor].some(v => norm(v).includes(q)));
+  }
+  res.json(rows);
 });
 
 // PUBLIC: List setores
@@ -113,12 +304,12 @@ app.get('/api/setores', (req, res) => {
 });
 
 // ADMIN: All ramais (including inactive)
-app.get('/api/admin/ramais', auth, (req, res) => {
+app.get('/api/admin/ramais', auth, can('ramais.gerenciar'), (req, res) => {
   res.json(db.prepare('SELECT * FROM ramais ORDER BY CASE WHEN posicao = 0 OR posicao IS NULL THEN 1 ELSE 0 END, posicao ASC, setor, nome').all());
 });
 
 // ADMIN: Create ramal
-app.post('/api/admin/ramais', auth, (req, res) => {
+app.post('/api/admin/ramais', auth, can('ramais.gerenciar'), (req, res) => {
   const { nome, cargo, setor, ramal, email, ativo, posicao } = req.body;
   if (!nome || !cargo || !setor || !ramal)
     return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
@@ -127,55 +318,218 @@ app.post('/api/admin/ramais', auth, (req, res) => {
 });
 
 // ADMIN: Update ramal
-app.put('/api/admin/ramais/:id', auth, (req, res) => {
+app.put('/api/admin/ramais/:id', auth, can('ramais.gerenciar'), (req, res) => {
   const { nome, cargo, setor, ramal, email, ativo, posicao } = req.body;
   db.prepare('UPDATE ramais SET nome=?, cargo=?, setor=?, ramal=?, email=?, ativo=?, posicao=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(nome, cargo, setor, ramal, email || '', ativo, posicao ?? 0, req.params.id);
   res.json({ message: 'Ramal atualizado com sucesso' });
 });
 
 // ADMIN: Delete ramal
-app.delete('/api/admin/ramais/:id', auth, (req, res) => {
+app.delete('/api/admin/ramais/:id', auth, can('ramais.gerenciar'), (req, res) => {
   db.prepare('DELETE FROM ramais WHERE id=?').run(req.params.id);
   res.json({ message: 'Ramal removido com sucesso' });
 });
 
-// ADMIN: List users
-app.get('/api/admin/users', auth, (req, res) => {
-  res.json(db.prepare('SELECT id, username, name, role, created_at FROM users ORDER BY name').all());
+// ─── USUÁRIOS ───
+function setUserGroups(userId, grupoIds) {
+  if (!Array.isArray(grupoIds)) return;
+  const valid = new Set(db.prepare('SELECT id FROM grupos').all().map(g => g.id));
+  db.prepare('DELETE FROM user_grupos WHERE user_id = ?').run(userId);
+  const ins = db.prepare('INSERT OR IGNORE INTO user_grupos (user_id, grupo_id) VALUES (?, ?)');
+  grupoIds.map(Number).filter(id => valid.has(id)).forEach(id => ins.run(userId, id));
+}
+const sendError = (res, e, fallback) => res.status(e.status || 400).json({ error: e.status ? e.message : fallback });
+
+app.get('/api/admin/users', auth, can('usuarios.gerenciar'), (req, res) => {
+  const users = db.prepare('SELECT * FROM users ORDER BY name').all();
+  res.json(users.map(u => ({ ...publicUser(u), created_at: u.created_at, ultimo_login: u.ultimo_login })));
 });
 
-// ADMIN: Create user
-app.post('/api/admin/users', auth, (req, res) => {
-  const { username, password, name, role } = req.body;
-  if (!username || !password || !name)
-    return res.status(400).json({ error: 'Campos obrigatórios: username, password, name' });
+// Cria um usuário local (com senha) ou pré-cadastra um usuário do LDAP (sem senha),
+// para já deixá-lo vinculado aos grupos antes do primeiro login.
+app.post('/api/admin/users', auth, can('usuarios.gerenciar'), (req, res) => {
+  const { username, password, name, email, origem, grupos } = req.body;
+  const isLdap = origem === 'ldap';
+  if (!username || !name || (!isLdap && !password))
+    return res.status(400).json({ error: isLdap ? 'Campos obrigatórios: usuário e nome' : 'Campos obrigatórios: usuário, nome e senha' });
+  if (!isLdap && password.length < 6) return res.status(400).json({ error: 'A senha precisa ter pelo menos 6 caracteres' });
   try {
-    const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)').run(username, hash, name, role || 'admin');
-    res.json({ id: result.lastInsertRowid, message: 'Usuário criado com sucesso' });
+    const id = guarded(() => {
+      const hash = isLdap ? '!' : bcrypt.hashSync(password, 10);
+      const r = db.prepare('INSERT INTO users (username, password, name, email, origem, role) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(isLdap ? username.toLowerCase() : username, hash, name, email || '', isLdap ? 'ldap' : 'local', '');
+      setUserGroups(r.lastInsertRowid, grupos || []);
+      return r.lastInsertRowid;
+    });
+    res.json({ id, message: 'Usuário criado com sucesso' });
   } catch (e) {
-    res.status(400).json({ error: 'Username já existe' });
+    sendError(res, e, 'Esse usuário já existe');
   }
 });
 
-// ADMIN: Update user
-app.put('/api/admin/users/:id', auth, (req, res) => {
-  const { name, role, password } = req.body;
-  if (password) {
-    const hash = bcrypt.hashSync(password, 10);
-    db.prepare('UPDATE users SET name=?, role=?, password=? WHERE id=?').run(name, role, hash, req.params.id);
-  } else {
-    db.prepare('UPDATE users SET name=?, role=? WHERE id=?').run(name, role, req.params.id);
+app.put('/api/admin/users/:id', auth, can('usuarios.gerenciar'), (req, res) => {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+  const { name, email, password, ativo, grupos } = req.body;
+  if (password && user.origem === 'ldap') return res.status(400).json({ error: 'A senha de usuários do LDAP é alterada no próprio AD' });
+  if (password && password.length < 6) return res.status(400).json({ error: 'A senha precisa ter pelo menos 6 caracteres' });
+  try {
+    guarded(() => {
+      db.prepare('UPDATE users SET name = ?, email = ?, ativo = ? WHERE id = ?')
+        .run(name || user.name, email ?? user.email ?? '', ativo === undefined ? user.ativo : (ativo ? 1 : 0), user.id);
+      if (password) db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(password, 10), user.id);
+      setUserGroups(user.id, grupos);
+    });
+    res.json({ message: 'Usuário atualizado com sucesso' });
+  } catch (e) {
+    sendError(res, e, 'Não foi possível atualizar o usuário');
   }
-  res.json({ message: 'Usuário atualizado com sucesso' });
 });
 
-// ADMIN: Delete user
-app.delete('/api/admin/users/:id', auth, (req, res) => {
+app.delete('/api/admin/users/:id', auth, can('usuarios.gerenciar'), (req, res) => {
   if (req.user.id == req.params.id)
     return res.status(400).json({ error: 'Não é possível excluir o próprio usuário' });
-  db.prepare('DELETE FROM users WHERE id=?').run(req.params.id);
-  res.json({ message: 'Usuário removido com sucesso' });
+  try {
+    guarded(() => db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id));
+    res.json({ message: 'Usuário removido com sucesso' });
+  } catch (e) {
+    sendError(res, e, 'Não foi possível remover o usuário');
+  }
+});
+
+// ─── GRUPOS DE PERMISSÃO ───
+function publicGroup(g) {
+  return {
+    id: g.id, nome: g.nome, descricao: g.descricao || '', sistema: !!g.sistema,
+    permissoes: parsePerms(g.permissoes),
+    ldap_grupos: (g.ldap_grupos || '').split(/\r?\n|;/).map(v => v.trim()).filter(Boolean),
+    membros: db.prepare('SELECT COUNT(*) AS c FROM user_grupos WHERE grupo_id = ?').get(g.id).c,
+  };
+}
+function groupPayload(body) {
+  const ldapList = Array.isArray(body.ldap_grupos) ? body.ldap_grupos : String(body.ldap_grupos || '').split(/\r?\n|;/);
+  return {
+    nome: String(body.nome || '').trim(),
+    descricao: String(body.descricao || '').trim(),
+    permissoes: JSON.stringify((body.permissoes || []).filter(p => PERMISSION_KEYS.includes(p))),
+    ldap_grupos: ldapList.map(v => String(v).trim()).filter(Boolean).join('\n'),
+  };
+}
+
+app.get('/api/admin/grupos', auth, (req, res) => {
+  // Quem gerencia usuários precisa ver os grupos para vincular.
+  if (!req.perms.includes('grupos.gerenciar') && !req.perms.includes('usuarios.gerenciar'))
+    return res.status(403).json({ error: 'Você não tem permissão para esta ação' });
+  res.json(db.prepare('SELECT * FROM grupos ORDER BY sistema DESC, nome').all().map(publicGroup));
+});
+
+app.post('/api/admin/grupos', auth, can('grupos.gerenciar'), (req, res) => {
+  const g = groupPayload(req.body);
+  if (!g.nome) return res.status(400).json({ error: 'Informe o nome do grupo' });
+  try {
+    const r = db.prepare('INSERT INTO grupos (nome, descricao, permissoes, ldap_grupos) VALUES (?, ?, ?, ?)')
+      .run(g.nome, g.descricao, g.permissoes, g.ldap_grupos);
+    res.json({ id: r.lastInsertRowid, message: 'Grupo criado com sucesso' });
+  } catch (e) {
+    res.status(400).json({ error: 'Já existe um grupo com esse nome' });
+  }
+});
+
+app.put('/api/admin/grupos/:id', auth, can('grupos.gerenciar'), (req, res) => {
+  const atual = db.prepare('SELECT * FROM grupos WHERE id = ?').get(req.params.id);
+  if (!atual) return res.status(404).json({ error: 'Grupo não encontrado' });
+  const g = groupPayload(req.body);
+  if (!g.nome) return res.status(400).json({ error: 'Informe o nome do grupo' });
+  // O grupo Administradores mantém sempre todas as permissões.
+  if (atual.sistema) g.permissoes = JSON.stringify(PERMISSION_KEYS);
+  try {
+    guarded(() => db.prepare('UPDATE grupos SET nome = ?, descricao = ?, permissoes = ?, ldap_grupos = ? WHERE id = ?')
+      .run(g.nome, g.descricao, g.permissoes, g.ldap_grupos, atual.id));
+    res.json({ message: 'Grupo atualizado com sucesso' });
+  } catch (e) {
+    sendError(res, e, 'Já existe um grupo com esse nome');
+  }
+});
+
+app.delete('/api/admin/grupos/:id', auth, can('grupos.gerenciar'), (req, res) => {
+  const g = db.prepare('SELECT * FROM grupos WHERE id = ?').get(req.params.id);
+  if (!g) return res.status(404).json({ error: 'Grupo não encontrado' });
+  if (g.sistema) return res.status(400).json({ error: 'O grupo Administradores não pode ser excluído' });
+  try {
+    guarded(() => db.prepare('DELETE FROM grupos WHERE id = ?').run(g.id));
+    res.json({ message: 'Grupo removido com sucesso' });
+  } catch (e) {
+    sendError(res, e, 'Não foi possível remover o grupo');
+  }
+});
+
+// ─── CONFIGURAÇÃO LDAP ───
+function ldapPayload(body, atual) {
+  const cfg = { ...atual };
+  ['url', 'bind_dn', 'base_dn', 'user_filter', 'attr_name', 'attr_email'].forEach(k => {
+    if (body[k] !== undefined) cfg[k] = String(body[k]).trim();
+  });
+  ['enabled', 'starttls', 'tls_reject_unauthorized'].forEach(k => {
+    if (body[k] !== undefined) cfg[k] = !!body[k];
+  });
+  if (body.default_group_id !== undefined) cfg.default_group_id = body.default_group_id ? Number(body.default_group_id) : null;
+  // Senha em branco mantém a atual; só troca se vier preenchida ou se pedir para limpar.
+  if (body.bind_password) cfg.bind_password = String(body.bind_password);
+  if (body.clear_bind_password) cfg.bind_password = '';
+  if (!cfg.user_filter) cfg.user_filter = LDAP_DEFAULTS.user_filter;
+  return cfg;
+}
+function validateLdap(cfg) {
+  if (!/^ldaps?:\/\//i.test(cfg.url)) return 'O endereço deve começar com ldap:// ou ldaps://';
+  if (!cfg.base_dn) return 'Informe a Base DN';
+  if (!cfg.user_filter.includes('{{username}}')) return 'O filtro de usuário precisa conter {{username}}';
+  return null;
+}
+
+app.get('/api/admin/config/ldap', auth, can('config.gerenciar'), (req, res) => {
+  res.json(publicLdapConfig(getLdapConfig()));
+});
+
+app.put('/api/admin/config/ldap', auth, can('config.gerenciar'), (req, res) => {
+  const cfg = ldapPayload(req.body, getLdapConfig());
+  if (cfg.enabled || cfg.url) {
+    const err = validateLdap(cfg);
+    if (err) return res.status(400).json({ error: err });
+  }
+  saveLdapConfig(cfg);
+  res.json({ message: 'Configuração LDAP salva', config: publicLdapConfig(cfg) });
+});
+
+// Testa a configuração do formulário (antes ou depois de salvar). Se vier um
+// usuário, mostra o que o sistema encontrou no AD e em quais grupos ele cairia.
+app.post('/api/admin/config/ldap/test', auth, can('config.gerenciar'), async (req, res) => {
+  const cfg = ldapPayload(req.body, getLdapConfig());
+  const err = validateLdap(cfg);
+  if (err) return res.status(400).json({ error: err });
+  try {
+    await ldap.testConnection(cfg);
+  } catch (e) {
+    return res.status(400).json({ error: 'Falha ao conectar: ' + e.message });
+  }
+  const username = String(req.body.test_username || '').trim();
+  if (!username) return res.json({ message: 'Conexão e conta de serviço OK' });
+  try {
+    const password = String(req.body.test_password || '');
+    const info = password ? await ldap.authenticate(cfg, username, password) : await ldap.findUser(cfg, username);
+    if (!info) {
+      return res.status(400).json({ error: password ? 'Usuário não encontrado ou senha incorreta' : 'Usuário não encontrado com esse filtro' });
+    }
+    const grupos = db.prepare('SELECT id, nome, ldap_grupos FROM grupos').all()
+      .filter(g => (g.ldap_grupos || '').trim() && ldap.matchesGroup(info.memberOf, g.ldap_grupos.split(/\r?\n|;/)))
+      .map(g => g.nome);
+    res.json({
+      message: password ? 'Usuário e senha válidos' : 'Usuário encontrado',
+      usuario: { dn: info.dn, nome: info.name, email: info.email, memberOf: info.memberOf },
+      grupos_do_sistema: grupos,
+    });
+  } catch (e) {
+    res.status(400).json({ error: 'Erro na busca: ' + e.message });
+  }
 });
 
 // Stats

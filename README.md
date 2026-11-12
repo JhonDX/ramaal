@@ -48,6 +48,47 @@ Aguarde ~30 segundos na primeira vez (compilação do SQLite nativo).
 
 ---
 
+## 👥 Grupos de permissão
+
+O acesso ao painel admin é controlado por **grupos de permissão** (menu *Grupos de Permissão*). Cada usuário pode estar em um ou mais grupos e recebe a soma das permissões deles:
+
+| Permissão                     | O que libera                                              |
+|-------------------------------|-----------------------------------------------------------|
+| Gerenciar ramais              | Criar, editar, ordenar e excluir ramais                   |
+| Gerenciar usuários            | Criar, editar e excluir usuários e vinculá-los a grupos   |
+| Gerenciar grupos de permissão | Criar e editar grupos e o mapeamento com grupos do LDAP   |
+| Configurações do sistema      | Configurar a integração LDAP / Active Directory           |
+
+- O grupo **Administradores** já vem criado, tem sempre todas as permissões e não pode ser excluído. Usuários que já existiam antes desta versão entram nele automaticamente.
+- O sistema não deixa salvar uma alteração que deixe ninguém ativo com permissão de gerenciar usuários e grupos.
+- Quem não está em nenhum grupo não consegue entrar no painel.
+
+---
+
+## 🔐 Login via LDAP / Active Directory
+
+Tudo é configurado pelo próprio sistema, em **Integração LDAP** (precisa da permissão *Configurações do sistema*). Não é preciso mexer no `docker-compose.yml`.
+
+1. Preencha o servidor (`ldap://dc01.gacc.local:389` ou `ldaps://dc01.gacc.local:636`), o usuário de serviço (Bind DN) e a senha dele, a Base DN e o filtro de usuário.
+   - Active Directory: `(sAMAccountName={{username}})`
+   - OpenLDAP: `(uid={{username}})`
+2. Clique em **Testar conexão** e depois teste um usuário real em **Testar um usuário**: o sistema mostra o DN, os grupos do AD e em quais grupos do sistema ele cairia.
+3. Em **Grupos de Permissão**, edite cada grupo e informe os grupos do AD vinculados a ele (DN completo, como `CN=TI,OU=Grupos,DC=gacc,DC=local`, ou só o nome `TI`).
+4. Ative o login LDAP e salve.
+
+Como funciona o login:
+
+- Usuários **locais** (como o `admin`) continuam entrando com a senha do sistema, mesmo com o LDAP ligado. Mantenha pelo menos um administrador local como acesso de emergência.
+- Os demais são validados no LDAP. No primeiro login o usuário é criado automaticamente, com nome e e-mail vindos do AD.
+- A cada login os grupos mapeados são sincronizados com o `memberOf` do AD: quem sai do grupo no AD perde o grupo no sistema. Grupos sem mapeamento LDAP são mantidos como o admin marcou.
+- Quem não cai em nenhum grupo usa o **grupo padrão** (se configurado); sem ele, o login é recusado.
+- Também dá para pré-cadastrar um usuário LDAP em *Usuários > Novo Usuário > Usuário da rede* e já deixá-lo nos grupos antes do primeiro acesso.
+- A senha do usuário de serviço fica salva no banco e nunca é devolvida para o navegador.
+
+> Grupos aninhados do AD (grupo dentro de grupo) não são resolvidos: o usuário precisa ser membro direto do grupo mapeado.
+
+---
+
 ## 🔌 Integração 3CX
 
 ### Funcionalidades disponíveis
@@ -102,6 +143,7 @@ docker compose up -d --build
 ramal-app/
 ├── backend/
 │   ├── server.js          # API REST (Express + SQLite + 3CX)
+│   ├── ldap.js            # Autenticação LDAP / Active Directory
 │   ├── package.json
 │   └── Dockerfile
 ├── frontend/
