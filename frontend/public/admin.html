@@ -977,6 +977,8 @@ let allRamais = [], allUsers = [], allGrupos = [], allPerms = [];
 let ldapCfg = null;
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Busca sem diferenciar maiúsculas nem acentos: "joao" encontra "João".
+const norm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const can = p => (currentUser?.permissoes || []).includes(p);
 
 // fetch autenticado: sessão expirada ou usuário desativado volta para o login.
@@ -1098,9 +1100,9 @@ function populateSetorList() {
 }
 
 function renderRamaisTable() {
-  const q = document.getElementById('ramalSearch')?.value.toLowerCase() || '';
+  const q = norm(document.getElementById('ramalSearch')?.value.trim());
   const filtered = allRamais.filter(r =>
-    [r.nome, r.cargo, r.setor, r.ramal, r.email].some(v => v.toLowerCase().includes(q))
+    [r.nome, r.cargo, r.setor, r.ramal, r.email].some(v => norm(v).includes(q))
   );
   const body = document.getElementById('ramalBody');
   body.innerHTML = filtered.map(r => `
@@ -1193,9 +1195,9 @@ function fmtDate(d) {
 }
 
 function renderUsersTable() {
-  const q = document.getElementById('userSearch')?.value.toLowerCase() || '';
+  const q = norm(document.getElementById('userSearch')?.value.trim());
   const filtered = allUsers.filter(u =>
-    [u.name, u.username, u.email, ...u.grupos.map(g => g.nome)].some(v => (v || '').toLowerCase().includes(q))
+    [u.name, u.username, u.email, ...u.grupos.map(g => g.nome)].some(v => norm(v).includes(q))
   );
   document.getElementById('userBody').innerHTML = filtered.map(u => `
     <tr>

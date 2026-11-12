@@ -285,13 +285,16 @@ app.get('/api/ramais', (req, res) => {
   const { search, setor } = req.query;
   let query = 'SELECT * FROM ramais WHERE ativo = 1';
   const params = [];
-  if (search) {
-    query += ' AND (nome LIKE ? OR cargo LIKE ? OR ramal LIKE ? OR email LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-  }
   if (setor) { query += ' AND setor = ?'; params.push(setor); }
   query += ' ORDER BY CASE WHEN posicao = 0 OR posicao IS NULL THEN 1 ELSE 0 END, posicao ASC, setor, nome';
-  res.json(db.prepare(query).all(...params));
+  let rows = db.prepare(query).all(...params);
+  // Filtra em JS para ignorar acentos e maiúsculas ("joao" encontra "João").
+  if (search) {
+    const norm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const q = norm(search.trim());
+    rows = rows.filter(r => [r.nome, r.cargo, r.ramal, r.email, r.setor].some(v => norm(v).includes(q)));
+  }
+  res.json(rows);
 });
 
 // PUBLIC: List setores

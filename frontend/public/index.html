@@ -68,15 +68,6 @@
     .logo-area { display: flex; align-items: center; text-decoration: none; }
     .logo-area img { height: 66px; width: auto; display: block; }
     .header-nav { display: flex; align-items: center; gap: 28px; }
-    .nav-link {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--blue);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .nav-link:hover, .nav-link.active { color: var(--green); }
     .btn-admin {
       background: var(--blue);
       color: var(--white);
@@ -409,7 +400,6 @@
       .header-inner { gap: 12px; }
       .header-inner { height: 76px; }
       .logo-area img { height: 50px; }
-      .nav-link { display: none; }
       .btn-admin { padding: 10px 14px; }
       .hero-strip { padding: 36px 20px 76px; }
       .hero-stats { width: 100%; }
@@ -486,8 +476,6 @@
       <img src="logo-gacc.png" alt="GACC-BA · Grupo de Apoio à Criança com Câncer - Bahia"/>
     </a>
     <nav class="header-nav">
-      <a href="index.html" class="nav-link active">Lista de Ramais</a>
-      <a href="https://gaccbahia.org.br" class="nav-link" target="_blank" rel="noopener">Site do GACC</a>
       <a href="admin.html" class="btn-admin">
         <i class="fas fa-lock"></i> Área Admin
       </a>
@@ -586,11 +574,14 @@
     renderView(allRamais);
   }
 
+  // Busca sem diferenciar maiúsculas nem acentos: "joao" encontra "João".
+  const norm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
   function filterRamais() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
+    const q = norm(document.getElementById('searchInput').value.trim());
     const setor = document.getElementById('setorFilter').value;
     const filtered = allRamais.filter(r => {
-      const matchQ = !q || [r.nome, r.cargo, r.ramal, r.email, r.setor].some(v => v.toLowerCase().includes(q));
+      const matchQ = !q || [r.nome, r.cargo, r.ramal, r.email, r.setor].some(v => norm(v).includes(q));
       const matchS = !setor || r.setor === setor;
       return matchQ && matchS;
     });
