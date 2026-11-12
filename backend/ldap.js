@@ -83,6 +83,51 @@ async function authenticate(cfg, username, password) {
   return ok ? user : null;
 }
 
+// Descobre o atributo de login a partir do filtro: "(sAMAccountName={{username}})" -> "sAMAccountName".
+function loginAttr(cfg) {
+  const m = /\(\s*([\w-]+)\s*=\s*\{\{username\}\}\s*\)/.exec(cfg.user_filter || '');
+  return m ? m[1] : 'sAMAccountName';
+}
+
+// Procura pessoas no diretório pelo login, nome ou e-mail (para o admin escolher quem cadastrar).
+async function searchUsers(cfg, term, limit = 50) {
+  const client = makeClient(cfg);
+  const login = loginAttr(cfg);
+  const nameAttr = cfg.attr_name || 'displayName';
+  const emailAttr = cfg.attr_email || 'mail';
+  const t = escapeFilter(term);
+  const filter = `(&(objectClass=person)(${login}=*)` +
+    `(|(${login}=*${t}*)(${nameAttr}=*${t}*)(${emailAttr}=*${t}*)(cn=*${t}*))` +
+    // Esconde contas desativadas do AD (bit 2 do userAccountControl); outros servidores ignoram.
+    (/samaccountname/i.test(login) ? '(!(userAccountControl:1.2.840.113556.1.4.803:=2))' : '') + ')';
+  try {
+    await startTlsIfNeeded(client, cfg);
+    if (cfg.bind_dn) await client.bind(cfg.bind_dn, cfg.bind_password || '');
+    let entries = [];
+    let truncado = false;
+    try {
+      ({ searchEntries: entries } = await client.search(cfg.base_dn, {
+        scope: 'sub', filter, sizeLimit: limit,
+        attributes: ['dn', login, nameAttr, emailAttr, 'cn', 'memberOf'],
+      }));
+    } catch (e) {
+      // Mais resultados do que o limite: o servidor recusa; peça uma busca mais específica.
+      if (/size\s*limit/i.test(e.message) || e.code === 4) truncado = true; else throw e;
+    }
+    const users = entries.map(e => ({
+      username: firstValue(e[login]).toLowerCase(),
+      name: firstValue(e[nameAttr]) || firstValue(e.cn) || firstValue(e[login]),
+      email: firstValue(e[emailAttr]),
+      dn: e.dn,
+      memberOf: asArray(e.memberOf).map(String),
+    })).filter(u => u.username);
+    users.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    return { users, truncado };
+  } finally {
+    await client.unbind().catch(() => {});
+  }
+}
+
 // Testa só a conexão e a conta de serviço.
 async function testConnection(cfg) {
   const client = makeClient(cfg);
@@ -113,4 +158,4 @@ function matchesGroup(memberOf, mappedValues) {
   });
 }
 
-module.exports = { authenticate, findUser, testConnection, matchesGroup, escapeFilter };
+module.exports = { authenticate, findUser, searchUsers, testConnection, matchesGroup, escapeFilter };
